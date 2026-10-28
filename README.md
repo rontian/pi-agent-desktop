@@ -23,7 +23,7 @@ This is the independently maintained **rontian Fork**. Its releases and updater 
 
 ![Pi Agent dark mode](./docs/screenshots/pi-agent-dark.webp)
 
-**[⬇️ Download Pi Agent (macOS / Windows)](https://github.com/rontian/pi-agent-desktop/releases)**
+**[⬇️ Download this Fork (Apple Silicon macOS)](https://github.com/rontian/pi-agent-desktop/releases)**
 
 Repository: [rontian/pi-agent-desktop](https://github.com/rontian/pi-agent-desktop)
 
@@ -31,7 +31,7 @@ Repository: [rontian/pi-agent-desktop](https://github.com/rontian/pi-agent-deskt
 
 ### Install The Desktop App
 
-Builds are available from [GitHub Releases](https://github.com/rontian/pi-agent-desktop/releases):
+This Fork's **locally published Apple Silicon builds** are available from [GitHub Releases](https://github.com/rontian/pi-agent-desktop/releases) after the first release:
 
 - Apple Silicon Mac: download the `aarch64.dmg`, open it, and drag the app into `Applications`. Official releases do not build for Intel Macs.
 - Apple Silicon Mac with [Homebrew](https://brew.sh): install from this repository's tap. The tap is added from the repo URL, so the first command is needed once:
@@ -42,11 +42,11 @@ Builds are available from [GitHub Releases](https://github.com/rontian/pi-agent-
   ```
 
   The app upgrades itself from Settings, so `brew upgrade` leaves it alone unless you pass `--greedy`. `brew uninstall --cask --zap pi-agent` removes the app and its window state but never `~/.pi`, which the pi CLI shares.
-- Linux x64: download the `.deb` package and install it with your distribution's package manager. The upstream community Flatpak is a different distribution and does not contain this fork's changes.
+- Linux x64: not published by this Fork; upstream packages do not include the Fork customizations.
 
-- Windows x64: download the installer whose name ends in `x64-setup.exe` and run it. The installer pulls in Microsoft WebView2 when it is missing.
+- Windows x64: not published by this Fork; upstream packages do not include the Fork customizations.
 
-Official releases support Apple Silicon Macs running macOS 11 or later, Windows 10/11 x64, and Linux x64 distributions with WebKitGTK 4.1 and GTK 3. The desktop package bundles the Next.js server, the Node.js runtime, and the current Pi SDK, so the local server starts with the app — no separate terminal, Node.js installation, or manually started web server is required.
+This Fork's published installers currently target Apple Silicon Macs on macOS 11 or later. The upstream sources also support Windows and Linux, but this Fork does not publish their installers. The desktop package bundles the Next.js server, the Node.js runtime, and the current Pi SDK, so the local server starts with the app — no separate terminal, Node.js installation, or manually started web server is required.
 
 > Installing Pi Agent gives you the agent inside the app, but it does not install a global `pi` command. If you also want the Pi CLI in your terminal, install it separately by following the [pi project](https://github.com/earendil-works/pi) instructions.
 
@@ -174,7 +174,7 @@ The desktop build:
 
 On Linux, the package requires a WebKitGTK 4.1 runtime and GTK 3. It includes the Node.js runtime, so users do not need to install Node.js separately.
 
-Local builds do not register the production updater and cannot accept official updates. Official releases must inject the updater public key through GitHub Actions and sign with the matching private key.
+Unsigned-updater local builds do not register the production updater. For this Fork, sign releases **locally** with `npm run release:build:mac` and publish assets using `npm run release:publish:mac` (gh), never GitHub Actions.
 
 ## Upstream Sync And Releases
 

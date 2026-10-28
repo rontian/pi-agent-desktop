@@ -23,7 +23,7 @@
 
 ![Pi Agent 深色模式界面](./docs/screenshots/pi-agent-dark.webp)
 
-**[⬇️ 下载 Pi Agent（macOS / Windows）](https://github.com/rontian/pi-agent-desktop/releases)**
+**[⬇️ 下载本 Fork（macOS Apple Silicon）](https://github.com/rontian/pi-agent-desktop/releases)**
 
 项目仓库：[rontian/pi-agent-desktop](https://github.com/rontian/pi-agent-desktop)
 
@@ -31,7 +31,7 @@
 
 ### 安装桌面 App
 
-发布版本可从 [GitHub Releases](https://github.com/rontian/pi-agent-desktop/releases) 下载：
+本 Fork 首次完成本地签名发布后，可从 [GitHub Releases](https://github.com/rontian/pi-agent-desktop/releases) 下载 macOS Apple Silicon 版本：
 
 - Apple Silicon Mac：下载 `aarch64.dmg`，打开后将 App 拖入 `Applications`。正式 Release 不构建 Intel Mac 版本。
 - 使用 [Homebrew](https://brew.sh) 的 Apple Silicon Mac：从本仓库的 tap 安装。tap 通过仓库地址添加，第一条命令只需执行一次：
@@ -42,10 +42,10 @@
   ```
 
   App 会在设置中自行升级，所以 `brew upgrade` 默认不会处理它，除非加上 `--greedy`。`brew uninstall --cask --zap pi-agent` 会删除 App 及其窗口状态，但不会删除与 pi CLI 共用的 `~/.pi`。
-- Linux x64：下载 `.deb` 包，用发行版自带的包管理器安装。上游社区的 Flatpak 不包含本 Fork 的定制，不是本仓库的发布渠道。
-- Windows x64：下载名称以 `x64-setup.exe` 结尾的安装程序并运行。安装器会在需要时安装 Microsoft WebView2。
+- Linux x64：本 Fork 不发布该平台安装包；上游的 Flatpak 不包含 Fork 定制。
+- Windows x64：本 Fork 不发布该平台安装包；不能把上游安装程序当作本 Fork 发行版。
 
-正式 Release 支持运行 macOS 11 或更高版本的 Apple Silicon Mac、Windows 10/11 x64，以及使用 WebKitGTK 4.1 和 GTK 3 的 Linux x64 发行版。桌面包内包含运行 Pi Agent 所需的 Next.js 服务、Node.js runtime 和当前版本的 Pi SDK，打开 App 时会自动启动本地服务，不需要用户另开终端、安装 Node.js 或单独启动 Web Server。
+本 Fork **目前只本地发布 Apple Silicon macOS 11+ 安装包**。上游代码支持 Windows 和 Linux，但本 Fork 不发布这两个平台的安装资产。桌面包内包含运行 Pi Agent 所需的 Next.js 服务、Node.js runtime 和当前版本的 Pi SDK，打开 App 时会自动启动本地服务，不需要用户另开终端、安装 Node.js 或单独启动 Web Server。
 
 > 安装 Pi Agent 后，可以直接使用 App 中的 Pi Agent 功能；但它不会在系统全局安装 `pi` 命令。如果还需要在终端中使用 Pi CLI，请按照 [pi 项目](https://github.com/earendil-works/pi) 的说明单独安装。
 
@@ -170,7 +170,7 @@ npm run desktop:build
 3. 将服务和运行时作为 Tauri Resources 放入 App。
 4. 在 Apple Silicon Mac 上生成 `.app`、`.dmg`，Windows x64 上生成 NSIS `-setup.exe`，Linux x64 上生成 `.deb`；本地不制作需要私钥的 updater 签名产物。
 
-本地构建默认不注册生产 updater，不能接受正式更新。正式 Release 必须通过 GitHub Actions 注入 updater 公钥，并使用对应私钥签名。
+本地无签名构建不注册生产 Updater。正式 Release 由维护者在 Mac 上运行 `npm run release:build:mac` 注入本 Fork Updater 公钥、使用本地私钥签名，再通过 `npm run release:publish:mac` 使用 gh 上传；GitHub Actions 不参与发布。
 
 ## 上游同步与 Release
 

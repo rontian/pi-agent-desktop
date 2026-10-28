@@ -48,7 +48,7 @@ src-tauri/target/release/bundle/nsis/Pi Agent_<version>_x64-setup.exe
 src-tauri/target/release/bundle/deb/pi-agent-desktop_<version>_amd64.deb
 ```
 
-构建结果是当前机器架构的原生应用：Apple Silicon 构建 `aarch64` DMG，Linux x64 构建 `.deb`，Windows x64 构建 NSIS `-setup.exe`。正式流水线不构建 Intel Mac 版本。发布给其他用户前，macOS 应使用 Apple Developer ID 签名并公证，Windows 应使用 Authenticode 证书签名；本地开发和测试不要求平台代码签名。
+构建结果是当前机器架构的原生应用：Apple Silicon 构建 `aarch64` DMG，Linux x64 构建 `.deb`，Windows x64 构建 NSIS `-setup.exe`。本 Fork 的本地正式发布仅支持 Apple Silicon Mac，不构建 Intel、Windows 或 Linux 发行资产。发布给其他用户前，macOS 应使用 Apple Developer ID 签名并公证，Windows 应使用 Authenticode 证书签名；本地开发和测试不要求平台代码签名。
 
 桌面版只检查 `rontian/pi-agent-desktop` 的最新稳定 Release（最多每七天一次）。上游更新需要先手动同步并由本地打包工具生成新的签名 App，再使用 gh 发布到本 Fork 后，已安装用户才可在设置中升级。详细机制见 [桌面升级与发布说明](./desktop-updates.md)。
 

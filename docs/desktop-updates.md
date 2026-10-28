@@ -9,4 +9,4 @@
 - 本地 `npm run desktop:build` 使用 `src-tauri/tauri.local.conf.json` 关闭 Updater 产物生成，不需要签名密钥，不可作为自动升级发布包。
 - Apple Developer ID 与公证独立于 Tauri updater 密钥。当前本地 macOS 发布默认使用 ad-hoc 签名；对外分发前需要额外配置。
 
-首次密钥设置、版本递增、Actions Secrets、发布检查、失败恢复和上游同步的完整操作请直接阅读 [fork-release.zh-CN.md](./fork-release.zh-CN.md)。
+首次本地密钥设置、版本递增、发布检查、失败恢复和上游同步的完整操作请直接阅读 [fork-release.zh-CN.md](./fork-release.zh-CN.md)。
