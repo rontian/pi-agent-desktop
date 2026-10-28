@@ -885,6 +885,8 @@ export const ChatInput = forwardRef<ChatInputHandle, Props>(function ChatInput({
   const [argumentCandidates, setArgumentCandidates] = useState<{ key: string; items: SlashArgumentCompletionItem[] } | null>(null);
   const [argumentActiveIndex, setArgumentActiveIndex] = useState(0);
   const [argumentDismissedKey, setArgumentDismissedKey] = useState<string | null>(null);
+  // New sessions can reuse a composer; previous cursor positions must not leak.
+  useEffect(() => { setArgumentCursor(null); setArgumentCandidates(null); }, [draftKey]);
   const [slashActiveIndex, setSlashActiveIndex] = useState(0);
   const [slashMenuMaxHeight, setSlashMenuMaxHeight] = useState<number | null>(null);
   const [atQuery, setAtQuery] = useState<AtQueryMatch | null>(null);
@@ -1374,7 +1376,7 @@ export const ChatInput = forwardRef<ChatInputHandle, Props>(function ChatInput({
     : null;
   const argumentCommandName = argumentContext?.name ?? null;
   const argumentPrefix = argumentContext?.prefix ?? null;
-  const argumentQueryKey = argumentContext ? JSON.stringify([argumentContext.name, argumentContext.prefix]) : null;
+  const argumentQueryKey = argumentContext ? JSON.stringify([draftKey, argumentContext.name, argumentContext.prefix]) : null;
   const argumentItems = argumentQueryKey !== null && argumentCandidates?.key === argumentQueryKey
     ? argumentCandidates.items : [];
   const argumentMenuOpen = Boolean(argumentContext && argumentItems.length > 0
@@ -1619,14 +1621,14 @@ export const ChatInput = forwardRef<ChatInputHandle, Props>(function ChatInput({
     setArgumentActiveIndex(0);
     // A trailing-space value explicitly invites a further completion level.
     setArgumentDismissedKey(item.value.endsWith(" ")
-      ? null : JSON.stringify([argumentContext.name, item.value]));
+      ? null : JSON.stringify([draftKey, argumentContext.name, item.value]));
     requestAnimationFrame(() => {
       const textarea = textareaRef.current;
       if (!textarea) return;
       textarea.focus();
       textarea.setSelectionRange(updated.cursor, updated.cursor);
     });
-  }, [argumentContext, value]);
+  }, [argumentContext, value, draftKey]);
 
   const sendQueued = useCallback(async (mode: "steer" | "followup") => {
     const msg = value.trim();
