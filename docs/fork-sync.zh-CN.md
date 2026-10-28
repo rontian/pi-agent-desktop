@@ -9,7 +9,7 @@
 - pi-web / Pi SDK 的组件更新是另一层；现有 `component-updates.yml` 处理的是这一层，
   不代替与桌面上游的同步。它目前需要手动触发，不会自动完成本 fork 的 UI 整合。
 
-不要通过重置 fork 到 upstream 的方式更新，也不要让安装器覆盖自定义版本。
+不要通过重置 fork 到 upstream 的方式更新，也不要让安装器覆盖自定义版本。上游 tag（如 `v0.7.7`）不强制修改；本 Fork 独立发行使用 `rontian-v0.7.7` 等专属 tag，长期并存。
 保持 upstream 的提交祖先关系，之后 Git 才能只合并新增的修改。
 
 ## 本次整合
