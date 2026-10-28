@@ -3,6 +3,7 @@
 import React, { useRef, useState, useCallback, useEffect, useLayoutEffect, useMemo, useImperativeHandle, forwardRef, KeyboardEvent } from "react";
 import type { BuiltinSlashCommandResult, CompactResultInfo, QueuedMessages, SlashCommandInfo } from "@/hooks/useAgentSession";
 import type { SkillsResponse } from "@/lib/api-types";
+import { applySlashArgumentCompletion, parseSlashArgumentContext, type SlashArgumentCompletionItem } from "@/lib/slash-argument-completion";
 import type { ModelScopeWarning } from "@/lib/model-scope-warnings";
 import type { UnavailableWorkspace } from "@/lib/workspace-availability";
 import type { TextContent, UserMessage } from "@/lib/types";
@@ -141,6 +142,7 @@ interface Props {
   slashCommands?: SlashCommandInfo[];
   slashCommandsLoading?: boolean;
   onLoadSlashCommands?: () => Promise<SlashCommandInfo[]> | SlashCommandInfo[];
+  onCompleteSlashArguments?: (name: string, prefix: string) => Promise<SlashArgumentCompletionItem[]>;
   onBuiltinCommand?: (message: string) => Promise<BuiltinSlashCommandResult>;
   onAudioUnlock?: () => void;
   draftKey?: string;
@@ -803,7 +805,7 @@ export const ChatInput = forwardRef<ChatInputHandle, Props>(function ChatInput({
   thinkingLevel, isAutoThinkingSelection = false, onThinkingLevelChange, availableThinkingLevels, thinkingLevelMap,
   savedDefaultThinkingLevel, onSetDefaultThinkingLevel,
   retryInfo, onAbortRetry, routedModel, branchSummaryPending = false, onAbortBranchSummary, automation, onSetAutomation, queuedMessages, onQueuedMessageAction, inputHistory = [], onRecallQueue,
-  slashCommands, slashCommandsLoading, onLoadSlashCommands,
+  slashCommands, slashCommandsLoading, onLoadSlashCommands, onCompleteSlashArguments,
   onBuiltinCommand,
   onAudioUnlock,
   onPromptWithStreamingBehavior,
@@ -879,6 +881,10 @@ export const ChatInput = forwardRef<ChatInputHandle, Props>(function ChatInput({
   const bashMode = !chatOnly && attachedImages.length === 0 && trimmedValue.startsWith("!");
   const bashExcluded = bashMode && trimmedValue.startsWith("!!");
   const [slashMenuOpen, setSlashMenuOpen] = useState(false);
+  const [argumentCursor, setArgumentCursor] = useState<number | null>(null);
+  const [argumentCandidates, setArgumentCandidates] = useState<{ key: string; items: SlashArgumentCompletionItem[] } | null>(null);
+  const [argumentActiveIndex, setArgumentActiveIndex] = useState(0);
+  const [argumentDismissedKey, setArgumentDismissedKey] = useState<string | null>(null);
   const [slashActiveIndex, setSlashActiveIndex] = useState(0);
   const [slashMenuMaxHeight, setSlashMenuMaxHeight] = useState<number | null>(null);
   const [atQuery, setAtQuery] = useState<AtQueryMatch | null>(null);
@@ -1363,6 +1369,16 @@ export const ChatInput = forwardRef<ChatInputHandle, Props>(function ChatInput({
     clearInput();
   }, [value, attachedImages, workspaceUnavailable, isStreaming, runBuiltinCommand, onSend, clearInput, onAudioUnlock, sessionMentionTargetsRef]);
 
+  const argumentContext = !compact && !atQuery && !hashQuery
+    ? parseSlashArgumentContext(value, argumentCursor ?? value.length)
+    : null;
+  const argumentCommandName = argumentContext?.name ?? null;
+  const argumentPrefix = argumentContext?.prefix ?? null;
+  const argumentQueryKey = argumentContext ? JSON.stringify([argumentContext.name, argumentContext.prefix]) : null;
+  const argumentItems = argumentQueryKey !== null && argumentCandidates?.key === argumentQueryKey
+    ? argumentCandidates.items : [];
+  const argumentMenuOpen = Boolean(argumentContext && argumentItems.length > 0
+    && argumentDismissedKey !== argumentQueryKey && !slashMenuOpen && !historyMenuOpen);
   const slashQuery = !compact && value.startsWith("/") && !/\s/.test(value.slice(1))
     ? value.slice(1).toLowerCase()
     : null;
@@ -1582,6 +1598,7 @@ export const ChatInput = forwardRef<ChatInputHandle, Props>(function ChatInput({
   const applySlashCommand = useCallback((command: SlashCommandPaletteItem) => {
     const nextValue = `/${command.name} `;
     setValue(nextValue);
+    setArgumentCursor(nextValue.length);
     setSlashMenuOpen(false);
     setSlashActiveIndex(0);
     requestAnimationFrame(() => {
@@ -1593,6 +1610,23 @@ export const ChatInput = forwardRef<ChatInputHandle, Props>(function ChatInput({
       ta.style.height = `${Math.min(ta.scrollHeight, 200)}px`;
     });
   }, []);
+
+  const applyArgumentCompletion = useCallback((item: SlashArgumentCompletionItem) => {
+    if (!argumentContext) return;
+    const updated = applySlashArgumentCompletion(value, argumentContext, item.value);
+    setValue(updated.text);
+    setArgumentCursor(updated.cursor);
+    setArgumentActiveIndex(0);
+    // A trailing-space value explicitly invites a further completion level.
+    setArgumentDismissedKey(item.value.endsWith(" ")
+      ? null : JSON.stringify([argumentContext.name, item.value]));
+    requestAnimationFrame(() => {
+      const textarea = textareaRef.current;
+      if (!textarea) return;
+      textarea.focus();
+      textarea.setSelectionRange(updated.cursor, updated.cursor);
+    });
+  }, [argumentContext, value]);
 
   const sendQueued = useCallback(async (mode: "steer" | "followup") => {
     const msg = value.trim();
@@ -1720,6 +1754,29 @@ export const ChatInput = forwardRef<ChatInputHandle, Props>(function ChatInput({
         }
       }
 
+      if (argumentMenuOpen && !isComposing) {
+        if (e.key === "ArrowDown") {
+          e.preventDefault();
+          setArgumentActiveIndex((index) => cycleListIndex(index, argumentItems.length, 1));
+          return;
+        }
+        if (e.key === "ArrowUp") {
+          e.preventDefault();
+          setArgumentActiveIndex((index) => cycleListIndex(index, argumentItems.length, -1));
+          return;
+        }
+        if (e.key === "Escape") {
+          e.preventDefault();
+          setArgumentDismissedKey(argumentQueryKey);
+          return;
+        }
+        if ((e.key === "Tab" || acceptShortcut) && argumentItems[argumentActiveIndex]) {
+          e.preventDefault();
+          applyArgumentCompletion(argumentItems[argumentActiveIndex]);
+          return;
+        }
+      }
+
       if (slashMenuOpen && slashQuery !== null && !isComposing) {
         if (e.key === "ArrowDown") {
           e.preventDefault();
@@ -1838,7 +1895,7 @@ export const ChatInput = forwardRef<ChatInputHandle, Props>(function ChatInput({
         }
       }
     },
-    [isMobile, enterSendMode, isStreaming, onSteer, onFollowUp, onAbort, slashMenuOpen, slashQuery, displayedSlashCommands, slashActiveIndex, applySlashCommand, sendQueued, handleSend, getNextSlashIndex, hashMenuOpen, hashQuery, hashMatches, hashActiveIndex, applyHashCompletion, atMenuOpen, atQuery, atMatches, atActiveIndex, applyAtCompletion, historyMenuOpen, inputHistory, historyActiveIndex, applyHistoryInput, value, setHashActiveIndex, setHashMenuOpen]
+    [isMobile, enterSendMode, isStreaming, onSteer, onFollowUp, onAbort, slashMenuOpen, slashQuery, displayedSlashCommands, slashActiveIndex, applySlashCommand, argumentMenuOpen, argumentQueryKey, argumentItems, argumentActiveIndex, applyArgumentCompletion, sendQueued, handleSend, getNextSlashIndex, hashMenuOpen, hashQuery, hashMatches, hashActiveIndex, applyHashCompletion, atMenuOpen, atQuery, atMatches, atActiveIndex, applyAtCompletion, historyMenuOpen, inputHistory, historyActiveIndex, applyHistoryInput, value, setHashActiveIndex, setHashMenuOpen]
   );
 
   const handleInput = useCallback(() => {
@@ -1906,6 +1963,25 @@ export const ChatInput = forwardRef<ChatInputHandle, Props>(function ChatInput({
       });
     }
   }, [slashQuery, onLoadSlashCommands]);
+
+  // Expensive extension callbacks are debounced; stale requests cannot modify the menu.
+  useEffect(() => {
+    if (argumentCommandName === null || argumentPrefix === null
+      || argumentQueryKey === null || !onCompleteSlashArguments) return;
+    let cancelled = false;
+    setArgumentCandidates({ key: argumentQueryKey, items: [] });
+    setArgumentActiveIndex(0);
+    const timer = setTimeout(() => {
+      void onCompleteSlashArguments(argumentCommandName, argumentPrefix)
+        .then((items) => {
+          if (!cancelled) setArgumentCandidates({ key: argumentQueryKey, items });
+        })
+        .catch(() => {
+          if (!cancelled) setArgumentCandidates({ key: argumentQueryKey, items: [] });
+        });
+    }, 140);
+    return () => { cancelled = true; clearTimeout(timer); };
+  }, [argumentCommandName, argumentPrefix, argumentQueryKey, onCompleteSlashArguments]);
 
   // Lazy-load skill dormancy (disable-model-invocation) each time the slash
   // palette opens, so toggles made in the skills panel are reflected on the
@@ -2734,12 +2810,14 @@ export const ChatInput = forwardRef<ChatInputHandle, Props>(function ChatInput({
             onChange={(e) => {
               valueRef.current = e.target.value;
               setValue(e.target.value);
+              setArgumentCursor(e.target.selectionStart);
               setHistoryMenuOpen(false);
               updateAtQuery(e.target.value, e.target.selectionStart);
               updateHashQuery(e.target.value, e.target.selectionStart);
             }}
             onSelect={(e) => {
               const el = e.currentTarget;
+              setArgumentCursor(el.selectionStart);
               updateAtQuery(el.value, el.selectionStart);
               updateHashQuery(el.value, el.selectionStart);
             }}
@@ -2751,6 +2829,7 @@ export const ChatInput = forwardRef<ChatInputHandle, Props>(function ChatInput({
               isComposingRef.current = false;
               lastCompositionEndAtRef.current = Date.now();
               const el = e.currentTarget;
+              setArgumentCursor(el.selectionStart);
               updateAtQuery(el.value, el.selectionStart);
               updateHashQuery(el.value, el.selectionStart);
             }}
