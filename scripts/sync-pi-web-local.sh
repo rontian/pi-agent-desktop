@@ -106,8 +106,10 @@ case "$command_name" in
       git switch -c "$new_branch"
       branch="$new_branch"
     fi
-    if git remote get-url pi-web-upstream >/dev/null 2>&1; then
-      actual="$(git remote get-url pi-web-upstream)"
+    if git config --get remote.pi-web-upstream.url >/dev/null 2>&1; then
+      # Read the raw configured URL: "git remote get-url" applies url.*.insteadOf,
+      # which is deliberately used by the offline integration test.
+      actual="$(git config --get remote.pi-web-upstream.url)"
       [[ "$actual" == https://github.com/agegr/pi-web.git ]] || die "pi-web-upstream 指向 $actual，不是官方上游"
     else
       git remote add pi-web-upstream https://github.com/agegr/pi-web.git
