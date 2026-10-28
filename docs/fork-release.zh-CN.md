@@ -105,7 +105,11 @@ npm run release:publish:mac
 - `component-versions.json`
 - `latest.json`
 
-脚本核对远端资产名称与大小后才将 Draft 标记为 Latest。**仅发布 macOS Apple Silicon**：latest.json 不含 Windows / Linux 入口，这些平台不属于本地 Mac 发布范围。不签名的同名资产不得混入。
+脚本按文件逐项上传，使用 macOS 自带的 `curl` 显示实时发送进度条，每隔约 15 秒输出一次状态，完成后显示平均速率。**客户端发送百分比不是 GitHub 存储确认**：每项文件都必须再通过 GitHub 返回的 SHA256、大小和 `uploaded` 状态校验。
+
+中断后的下一次执行可复用同一 tag 的已有 Draft，跳过 SHA256 完全一致的资产，只补传缺失文件。对 GitHub 可能遗留的、已确认 `starter` 且大小为 0 的同名占位资产，会精确检查后清理并重传。未知资产、重复文件、已完成文件哈希不符、已有正式 Release、构建来源不一致等情况均停止，不会覆盖或公开半成品。断网后不需要重新构建，重新执行 `npm run release:publish:mac` 即可安全续传。
+
+全部五项文件经远端 SHA256 和大小校验后才将 Draft 标记为 Latest。**仅发布 macOS Apple Silicon**：latest.json 不含 Windows / Linux 入口，这些平台不属于本地 Mac 发布范围。不签名的同名资产不得混入。
 
 成功后：
 
@@ -113,7 +117,7 @@ npm run release:publish:mac
 gh release view "rontian-v$(node -p "require('./src-tauri/pi-agent-desktop-package.json').version")" --repo rontian/pi-agent-desktop
 ```
 
-已有同名 Release/Draft 或 tag 指向不同提交时，脚本拒绝自动覆盖，绝不使用 `-f`，请人工核查已有资产、标签与构建来源。Release 资产默认使用 gh 的自动生成说明，可在发布前后使用 gh release edit 调整说明。
+已有同名**正式 Release** 或 tag 指向不同提交时，脚本拒绝覆盖；已有同名 Draft 则仅在每项资产通过完整 SHA256/大小校验后安全续传。绝不使用 `-f` 强制覆盖，请人工核查异常资产、标签与构建来源。Release 资产默认使用 gh 的自动生成说明，可在发布前后使用 gh release edit 调整说明。
 
 ## 首次迁移与后续更新
 
