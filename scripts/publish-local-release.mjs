@@ -23,7 +23,7 @@ function fetchRelease(tag) {
   });
   if (result.error) throw result.error;
   if (result.status === 0) return JSON.parse(result.stdout);
-  if (/\\bHTTP 404\\b/.test(result.stderr ?? "")) return null;
+  if (/\bHTTP 404\b/.test(result.stderr ?? "")) return null;
   throw new Error("Unable to retrieve release from GitHub: " + (result.stderr?.trim() || "exit " + result.status));
 }
 function validateDraft(release, tag) {
@@ -82,7 +82,7 @@ if (localTag.status === 0) {
 }
 const remoteTag = capture("git", ["ls-remote", "--tags", "origin", "refs/tags/" + tag]);
 if (!remoteTag) run("git", ["push", "origin", "refs/tags/" + tag]);
-else if (capture("git", ["ls-remote", "--tags", "origin", "refs/tags/" + tag + "^{}"]).split(/\\s+/)[0] !== metadata.commit) {
+else if (capture("git", ["ls-remote", "--tags", "origin", "refs/tags/" + tag + "^{}"]).split(/\s+/)[0] !== metadata.commit) {
   throw new Error("Remote release tag does not point to this commit.");
 }
 let release = fetchRelease(tag);
