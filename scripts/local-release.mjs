@@ -7,6 +7,16 @@ export const RELEASE_REPO = "rontian/pi-agent-desktop";
 export const RELEASE_DIR = join(rootDir, "src-tauri", "target", "release", "bundle");
 export const RELEASE_METADATA_PATH = join(RELEASE_DIR, "local-release", "release-build.json");
 export const RELEASE_LATEST_PATH = join(RELEASE_DIR, "local-release", "latest.json");
+export const RELEASE_UPLOAD_DIR = join(RELEASE_DIR, "local-release", "assets");
+
+export function uploadAssetPaths(version) {
+  const v = normalizeVersion(version);
+  return {
+    dmg: join(RELEASE_UPLOAD_DIR, "Pi.Agent_" + v + "_aarch64.dmg"),
+    archive: join(RELEASE_UPLOAD_DIR, "Pi.Agent.app.tar.gz"),
+    signature: join(RELEASE_UPLOAD_DIR, "Pi.Agent.app.tar.gz.sig"),
+  };
+}
 
 export function macReleaseAssets(version) {
   const normalized = normalizeVersion(version);
@@ -35,7 +45,7 @@ export function createMacUpdaterManifest(version, signature) {
     platforms: {
       "darwin-aarch64": {
         signature: signature.trim(),
-        url: githubAssetUrl(normalized, "Pi Agent.app.tar.gz"),
+        url: githubAssetUrl(normalized, "Pi.Agent.app.tar.gz"),
       },
     },
   };
@@ -53,7 +63,7 @@ export async function describeFile(path) {
 
 export async function verifyBuildAssets(metadata) {
   if (!metadata || typeof metadata !== "object") throw new Error("Invalid release-build.json");
-  const paths = macReleaseAssets(metadata.version);
+  const paths = uploadAssetPaths(metadata.version);
   const selected = {
     dmg: paths.dmg,
     archive: paths.archive,
