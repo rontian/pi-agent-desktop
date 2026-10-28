@@ -6,6 +6,7 @@ import { homedir } from "node:os";
 import { join, resolve } from "node:path";
 import { rootDir, forkReleaseTag } from "./release-components.mjs";
 import { validateUpdaterPublicKey } from "./configure-updater-public-key.mjs";
+import { assertDeveloperIdReleaseEnvironment, signStagedMacResources } from "./sign-staged-macos.mjs";
 import { resolveSigningPassword, promptSigningPassword, verifySigningPasswordWithTauri } from "./local-signing-password.mjs";
 import {
   macReleaseAssets, uploadAssetPaths, createMacUpdaterManifest, describeFile, RELEASE_LATEST_PATH, RELEASE_METADATA_PATH, RELEASE_UPLOAD_DIR,
@@ -23,6 +24,7 @@ if (process.platform !== "darwin" || process.arch !== "arm64") {
 const branch = execFileSync("git", ["branch", "--show-current"], { cwd: rootDir, encoding: "utf8" }).trim();
 const dirty = execFileSync("git", ["status", "--porcelain"], { cwd: rootDir, encoding: "utf8" }).trim();
 if (branch !== "main" || dirty) throw new Error("Release build requires a clean local main checkout (got " + branch + ").");
+const identity = assertDeveloperIdReleaseEnvironment(process.env);
 const commit = execFileSync("git", ["rev-parse", "HEAD"], { cwd: rootDir, encoding: "utf8" }).trim();
 const version = JSON.parse(await readFile(join(rootDir, "src-tauri", "pi-agent-desktop-package.json"), "utf8")).version;
 const keyFile = resolve(process.env.PI_AGENT_RELEASE_KEY_PATH || join(homedir(), ".tauri", "rontian-pi-agent.key"));
@@ -39,18 +41,26 @@ const env = {
   TAURI_SIGNING_PRIVATE_KEY: keyFile,
   TAURI_SIGNING_PRIVATE_KEY_PASSWORD: signingPassword,
   PI_AGENT_DESKTOP_UPDATER_PUBLIC_KEY: publicKey,
-  APPLE_SIGNING_IDENTITY: process.env.APPLE_SIGNING_IDENTITY || "-",
+  APPLE_SIGNING_IDENTITY: identity,
 };
 const assets = macReleaseAssets(version);
 const upload = uploadAssetPaths(version);
 run("npm", ["run", "release:check"]);
 run("npm", ["run", "desktop:prepare"]);
+// macOS notarization scans executable code inside Tauri resources; sign native
+// Node addons, dylibs and the embedded Node helper before the outer app bundle.
+await signStagedMacResources({ identity });
 // Prevent a failed build from mistakenly reusing stale artifacts from an earlier run.
 for (const path of [assets.dmg, assets.archive, assets.signature, upload.dmg, upload.archive, upload.signature, RELEASE_LATEST_PATH, RELEASE_METADATA_PATH]) {
   await rm(path, { force: true });
 }
 const tauriConfig = JSON.stringify({ plugins: { updater: { pubkey: publicKey } } });
 run("npx", ["tauri", "build", "--bundles", "app,dmg", "--config", tauriConfig], env);
+// Tauri must have notarized and stapled the app before any release metadata
+// can be marked publishable. A successful bundle command alone is insufficient.
+run("codesign", ["--verify", "--deep", "--strict", "--verbose=2", assets.app]);
+run("xcrun", ["stapler", "validate", assets.app]);
+run("spctl", ["--assess", "--type", "execute", "--verbose=4", assets.app]);
 await mkdir(RELEASE_UPLOAD_DIR, { recursive: true });
 for (const kind of ["dmg", "archive", "signature"]) await copyFile(assets[kind], upload[kind]);
 const signature = (await readFile(upload.signature, "utf8")).trim();
@@ -64,7 +74,8 @@ for (const [name, path] of Object.entries({
   files[name] = await describeFile(path);
 }
 await writeFile(RELEASE_METADATA_PATH, JSON.stringify({
-  version, tag: forkReleaseTag(version), commit, repository: "rontian/pi-agent-desktop", files,
+  version, tag: forkReleaseTag(version), commit, repository: "rontian/pi-agent-desktop",
+  appleNotarized: true, files,
 }, null, 2) + "\n");
-console.log("Signed macOS release is ready locally at " + RELEASE_METADATA_PATH);
+console.log("Developer ID signed and notarized macOS release is ready locally at " + RELEASE_METADATA_PATH);
 console.log("Next: npm run release:publish:mac (uploads assets using gh, after review).");
