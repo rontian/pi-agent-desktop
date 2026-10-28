@@ -97,7 +97,7 @@ npm run release:build:mac
 npm run release:publish:mac
 ```
 
-`release:publish:mac` 检查：main 与 origin/main 完全一致、工作区干净、构建对应当前提交、资产哈希未变、Updater 签名与 latest.json 匹配、组件清单正确以及版本 tag 没有被其它 Release 使用。然后在本地创建并推送注释 tag（若已有则确认指向相同 commit），用 **gh** 创建 Draft Release 并上传五项资产：
+\`release:publish:mac\` 检查：main 与 origin/main 完全一致、工作区干净、构建来源提交可追溯、资产哈希未变、Updater 签名与 latest.json 匹配、组件清单正确以及版本 tag 没有被其它 Release 使用。**通常要求构建对应当前 main**。如果耗时构建完成后仅修正了发布验证器，可以保留原构建并发布：脚本会核验旧提交是当前 main 的祖先、差异严格限定为发布验证脚本/测试/本手册，以及 \`scripts/local-release.mjs\` 在 \`verifyBuildAssets\` 之前的构建相关逻辑完全没变。任何应用源码、依赖、打包或资源变动均拒绝复用。此时发行 tag **指向原来产生二进制的构建提交**，而不是新 main；元数据不伪造或改写。然后在本地创建并推送注释 tag（若已有则确认指向相同 commit），用 **gh** 创建 Draft Release 并上传五项资产：
 
 - `Pi.Agent_<版本>_aarch64.dmg`
 - `Pi.Agent.app.tar.gz`（本地脚本将 Tauri 产物复制并规范化的上传名称）
