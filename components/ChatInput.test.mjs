@@ -137,6 +137,7 @@ test("follow-up shortcuts preserve newline, IME, mobile and completion behavior"
     ["Alt+Enter falls back to steer", { altKey: true }, { onFollowUp: undefined }, "steer"],
     ["slash completion takes priority", { altKey: true }, { slashMenuOpen: true, slashQuery: "help" }, "slash"],
     ["argument completion selects without sending", { altKey: true }, { argumentMenuOpen: true, argumentItems: [{ value: "checkpoint push" }] }, "argument"],
+    ["argument completion takes priority over #session mentions", { altKey: true }, { argumentMenuOpen: true, hashMenuOpen: true, hashQuery: { query: "123" }, argumentItems: [{ value: "#123" }] }, "argument"],
     ["available built-in commands take priority", { altKey: true }, { slashMenuOpen: true, slashQuery: "copy", value: "/copy", displayedSlashCommands: [{ name: "copy", source: "builtin", availableWhileStreaming: true }] }, "send"],
     ["pi's built-in /mcp submits at once, also while streaming", {}, { slashMenuOpen: true, slashQuery: "mcp", value: "/mcp", displayedSlashCommands: [{ name: "mcp", source: "extension", sourceInfo: { path: "builtin:mcp" } }] }, "send"],
     ["another extension's /mcp completes first", {}, { slashMenuOpen: true, slashQuery: "mcp", value: "/mcp", displayedSlashCommands: [{ name: "mcp", source: "extension", sourceInfo: { path: "/ext/mcp.ts" } }] }, "slash"],
