@@ -49,7 +49,7 @@
 
 > 安装 Pi Agent 后，可以直接使用 App 中的 Pi Agent 功能；但它不会在系统全局安装 `pi` 命令。如果还需要在终端中使用 Pi CLI，请按照 [pi 项目](https://github.com/earendil-works/pi) 的说明单独安装。
 
-> **macOS 首次打开被拦截**：macOS 版本目前没有 Apple Developer ID 签名和公证，首次打开时 Gatekeeper 可能提示“无法验证开发者”或“已损坏，无法打开”（通过 Homebrew 安装也一样）。可以在「系统设置 › 隐私与安全性」中点「仍要打开」，或在终端执行：
+> **macOS 首次打开被拦截**：macOS 版本默认不进行 Apple 公证；如果维护者已配置 Developer ID Application，则本地正式构建会使用该证书签名，首次打开时 Gatekeeper 可能提示“无法验证开发者”或“已损坏，无法打开”（通过 Homebrew 安装也一样）。可以在「系统设置 › 隐私与安全性」中点「仍要打开」，或在终端执行：
 >
 > ```bash
 > xattr -dr com.apple.quarantine "/Applications/Pi Agent.app"
@@ -170,7 +170,7 @@ npm run desktop:build
 3. 将服务和运行时作为 Tauri Resources 放入 App。
 4. 在 Apple Silicon Mac 上生成 `.app`、`.dmg`，Windows x64 上生成 NSIS `-setup.exe`，Linux x64 上生成 `.deb`；本地不制作需要私钥的 updater 签名产物。
 
-本地无签名构建不注册生产 Updater。正式 Release 由维护者在 Mac 上运行 `npm run release:build:mac` 注入本 Fork Updater 公钥、使用本地私钥签名，再通过 `npm run release:publish:mac` 使用 gh 上传；GitHub Actions 不参与发布。
+本地无签名构建不注册生产 Updater。正式 Release 由维护者在 Mac 上运行 `npm run release:build:mac` 注入本 Fork Updater 公钥、使用本地私钥签名（默认移除公证凭证，但保留可用的 Developer ID 签名），再通过 `npm run release:publish:mac` 使用 gh 上传；GitHub Actions 不参与发布。
 
 ## 上游同步与 Release
 

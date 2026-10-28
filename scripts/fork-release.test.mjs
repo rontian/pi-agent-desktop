@@ -39,11 +39,16 @@ test("GitHub Actions release is disabled; macOS release uses local gh scripts", 
   assert.match(pkg.scripts["release:publish:mac"], /publish-local-release\.mjs/);
   assert.match(pkg.scripts["desktop:build:app"], /--bundles app/);
   const buildScript = await read("scripts/build-local-release.mjs");
-  assert.match(buildScript, /TAURI_SIGNING_PRIVATE_KEY: keyFile/);
-  assert.match(buildScript, /TAURI_SIGNING_PRIVATE_KEY_PASSWORD: signingPassword/);
   assert.match(buildScript, /verifySigningPasswordWithTauri/);
   assert.match(buildScript, /initialPassword: process\.env\.TAURI_SIGNING_PRIVATE_KEY_PASSWORD/);
-  assert.match(buildScript, /PI_AGENT_DESKTOP_UPDATER_PUBLIC_KEY: publicKey/);
+  assert.match(buildScript, /localReleaseBuildEnvironment\(process\.env/);
+  assert.match(buildScript, /keyFile, signingPassword, publicKey/);
+  assert.match(buildScript, /\["tauri", "build", "--bundles", "app,dmg", "--config", tauriConfig\], env/);
+  const signingEnvironment = await read("scripts/local-release-signing-env.mjs");
+  assert.match(signingEnvironment, /TAURI_SIGNING_PRIVATE_KEY: keyFile/);
+  assert.match(signingEnvironment, /TAURI_SIGNING_PRIVATE_KEY_PASSWORD: signingPassword/);
+  assert.match(signingEnvironment, /PI_AGENT_DESKTOP_UPDATER_PUBLIC_KEY: publicKey/);
+  assert.match(signingEnvironment, /APPLE_SIGNING_IDENTITY: environment\.APPLE_SIGNING_IDENTITY/);
 });
 
 test("local updater manifest targets the signed macOS archive on this fork", async () => {

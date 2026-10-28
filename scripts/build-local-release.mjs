@@ -6,6 +6,7 @@ import { homedir } from "node:os";
 import { join, resolve } from "node:path";
 import { rootDir, forkReleaseTag } from "./release-components.mjs";
 import { validateUpdaterPublicKey } from "./configure-updater-public-key.mjs";
+import { localReleaseBuildEnvironment } from "./local-release-signing-env.mjs";
 import { resolveSigningPassword, promptSigningPassword, verifySigningPasswordWithTauri } from "./local-signing-password.mjs";
 import {
   macReleaseAssets, uploadAssetPaths, createMacUpdaterManifest, describeFile, RELEASE_LATEST_PATH, RELEASE_METADATA_PATH, RELEASE_UPLOAD_DIR,
@@ -34,13 +35,12 @@ const signingPassword = await resolveSigningPassword({
   promptPassword: promptSigningPassword,
   onWrongPassword: () => console.error("Updater signing password is incorrect; please enter it again."),
 });
-const env = {
-  ...process.env,
-  TAURI_SIGNING_PRIVATE_KEY: keyFile,
-  TAURI_SIGNING_PRIVATE_KEY_PASSWORD: signingPassword,
-  PI_AGENT_DESKTOP_UPDATER_PUBLIC_KEY: publicKey,
-  APPLE_SIGNING_IDENTITY: process.env.APPLE_SIGNING_IDENTITY || "-",
-};
+const env = localReleaseBuildEnvironment(process.env, {
+  keyFile, signingPassword, publicKey,
+});
+// This local release intentionally skips Apple notarization even when the
+// maintainer has Apple credentials exported for other projects.
+console.log("macOS release: Developer ID signing if configured; Apple notarization intentionally disabled.");
 const assets = macReleaseAssets(version);
 const upload = uploadAssetPaths(version);
 run("npm", ["run", "release:check"]);

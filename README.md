@@ -50,7 +50,7 @@ This Fork's published installers currently target Apple Silicon Macs on macOS 11
 
 > Installing Pi Agent gives you the agent inside the app, but it does not install a global `pi` command. If you also want the Pi CLI in your terminal, install it separately by following the [pi project](https://github.com/earendil-works/pi) instructions.
 
-> **macOS blocks the first launch**: the macOS build is not yet signed with an Apple Developer ID or notarized, so Gatekeeper may say the developer cannot be verified or that the app "is damaged and can't be opened" (Homebrew installs included). Click "Open Anyway" in System Settings › Privacy & Security, or run:
+> **macOS blocks the first launch**: macOS releases are not notarized by default; local official builds use a Developer ID Application identity when configured, so Gatekeeper may say the developer cannot be verified or that the app "is damaged and can't be opened" (Homebrew installs included). Click "Open Anyway" in System Settings › Privacy & Security, or run:
 >
 > ```bash
 > xattr -dr com.apple.quarantine "/Applications/Pi Agent.app"
@@ -174,7 +174,7 @@ The desktop build:
 
 On Linux, the package requires a WebKitGTK 4.1 runtime and GTK 3. It includes the Node.js runtime, so users do not need to install Node.js separately.
 
-Unsigned-updater local builds do not register the production updater. For this Fork, sign releases **locally** with `npm run release:build:mac` and publish assets using `npm run release:publish:mac` (gh), never GitHub Actions.
+Unsigned-updater local builds do not register the production updater. For this Fork, sign releases **locally** with `npm run release:build:mac` (Apple notarization disabled by default; Developer ID signing retained if configured) and publish assets using `npm run release:publish:mac` (gh), never GitHub Actions.
 
 ## Upstream Sync And Releases
 
