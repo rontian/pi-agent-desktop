@@ -20,6 +20,8 @@ npm run desktop:dev
 
 ## 构建 App 与 DMG
 
+本地 `desktop:build` 不生成 Updater 签名产物，也不需要 `TAURI_SIGNING_PRIVATE_KEY`；要发布带自动更新功能的正式包，请使用 [独立发行手册](./fork-release.zh-CN.md) 中的本地签名构建与 gh 上传流程。
+
 ```bash
 npm install
 npm run desktop:build
@@ -29,7 +31,7 @@ npm run desktop:build
 
 1. 在 `.next-desktop/` 生成隔离的 Next.js standalone build。
 2. 将服务端资源与当前平台架构的 Node runtime 暂存给 Tauri。
-3. 在 macOS 生成 `.app` 和 `.dmg`，在 Windows x64 生成 NSIS `-setup.exe`，在 Linux x64 生成 `.deb`。
+3. 在 macOS 生成 `.app` 和 `.dmg`，在 Windows x64 生成 NSIS `-setup.exe`，在 Linux x64 生成 `.deb`（本地关闭 updater 签名归档生成）。
 
 Linux 安装包依赖 WebKitGTK 4.1 和 GTK 3 运行库；Node runtime 已包含在安装包中，用户无需另行安装 Node.js。
 
@@ -46,9 +48,9 @@ src-tauri/target/release/bundle/nsis/Pi Agent_<version>_x64-setup.exe
 src-tauri/target/release/bundle/deb/pi-agent-desktop_<version>_amd64.deb
 ```
 
-构建结果是当前机器架构的原生应用：Apple Silicon 构建 `aarch64` DMG，Linux x64 构建 `.deb`，Windows x64 构建 NSIS `-setup.exe`。正式流水线不构建 Intel Mac 版本。发布给其他用户前，macOS 应使用 Apple Developer ID 签名并公证，Windows 应使用 Authenticode 证书签名；本地开发和测试不要求平台代码签名。
+构建结果是当前机器架构的原生应用：Apple Silicon 构建 `aarch64` DMG，Linux x64 构建 `.deb`，Windows x64 构建 NSIS `-setup.exe`。本 Fork 的本地正式发布仅支持 Apple Silicon Mac，不构建 Intel、Windows 或 Linux 发行资产。发布给其他用户前，macOS 应使用 Apple Developer ID 签名并公证，Windows 应使用 Authenticode 证书签名；本地开发和测试不要求平台代码签名。
 
-桌面版会检查 `pi-agent-desktop`、Pi 与 Pi Web 的官方 GitHub Release。每个项目最多每 7 天检查一次；发现任一组件有新版后，用户可以从设置中安装包含全部最新组件的完整签名 App 并重启。详细机制见 [桌面升级与发布说明](./desktop-updates.md)。
+桌面版只检查 `rontian/pi-agent-desktop` 的最新稳定 Release（最多每七天一次）。上游更新需要先手动同步并由本地打包工具生成新的签名 App，再使用 gh 发布到本 Fork 后，已安装用户才可在设置中升级。详细机制见 [桌面升级与发布说明](./desktop-updates.md)。
 
 ## 运行日志
 

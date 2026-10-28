@@ -2,6 +2,8 @@
 
 **English** | [简体中文](./README.zh-CN.md)
 
+This is the independently maintained **rontian Fork**. Its releases and updater are separate from the desktop upstream; see [Fork release manual](./docs/fork-release.zh-CN.md).
+
 `pi-agent-desktop` is a local AI agent desktop app for macOS and Windows. It packages the agent capabilities of [pi](https://github.com/earendil-works/pi) into a standalone, installable application.
 
 ## Features
@@ -21,30 +23,30 @@
 
 ![Pi Agent dark mode](./docs/screenshots/pi-agent-dark.webp)
 
-**[⬇️ Download Pi Agent (macOS / Windows)](https://github.com/abcwyc/pi-agent-desktop/releases)**
+**[⬇️ Download this Fork (Apple Silicon macOS)](https://github.com/rontian/pi-agent-desktop/releases)**
 
-Repository: [abcwyc/pi-agent-desktop](https://github.com/abcwyc/pi-agent-desktop)
+Repository: [rontian/pi-agent-desktop](https://github.com/rontian/pi-agent-desktop)
 
 ## Installation And Usage
 
 ### Install The Desktop App
 
-Builds are available from [GitHub Releases](https://github.com/abcwyc/pi-agent-desktop/releases):
+This Fork's **locally published Apple Silicon builds** are available from [GitHub Releases](https://github.com/rontian/pi-agent-desktop/releases) after the first release:
 
 - Apple Silicon Mac: download the `aarch64.dmg`, open it, and drag the app into `Applications`. Official releases do not build for Intel Macs.
 - Apple Silicon Mac with [Homebrew](https://brew.sh): install from this repository's tap. The tap is added from the repo URL, so the first command is needed once:
 
   ```bash
-  brew tap abcwyc/pi-agent-desktop https://github.com/abcwyc/pi-agent-desktop
+  brew tap rontian/pi-agent-desktop https://github.com/rontian/pi-agent-desktop
   brew install --cask pi-agent
   ```
 
   The app upgrades itself from Settings, so `brew upgrade` leaves it alone unless you pass `--greedy`. `brew uninstall --cask --zap pi-agent` removes the app and its window state but never `~/.pi`, which the pi CLI shares.
-- Linux x64: download the `.deb` package and install it with your distribution's package manager. A community-maintained Flatpak is also available at [flatpark.org](https://flatpark.org/apps/io.github.abcwyc.pi-agent-desktop/) — not an official release, but Flatpak works across most distributions and handles updates for you.
+- Linux x64: not published by this Fork; upstream packages do not include the Fork customizations.
 
-- Windows x64: download the installer whose name ends in `x64-setup.exe` and run it. The installer pulls in Microsoft WebView2 when it is missing.
+- Windows x64: not published by this Fork; upstream packages do not include the Fork customizations.
 
-Official releases support Apple Silicon Macs running macOS 11 or later, Windows 10/11 x64, and Linux x64 distributions with WebKitGTK 4.1 and GTK 3. The desktop package bundles the Next.js server, the Node.js runtime, and the current Pi SDK, so the local server starts with the app — no separate terminal, Node.js installation, or manually started web server is required.
+This Fork's published installers currently target Apple Silicon Macs on macOS 11 or later. The upstream sources also support Windows and Linux, but this Fork does not publish their installers. The desktop package bundles the Next.js server, the Node.js runtime, and the current Pi SDK, so the local server starts with the app — no separate terminal, Node.js installation, or manually started web server is required.
 
 > Installing Pi Agent gives you the agent inside the app, but it does not install a global `pi` command. If you also want the Pi CLI in your terminal, install it separately by following the [pi project](https://github.com/earendil-works/pi) instructions.
 
@@ -76,25 +78,9 @@ Model keys and session data stay on your machine. The file-browsing API only all
 
 ## Update Checks And Upgrades
 
-Pi Agent checks the latest stable release of `abcwyc/pi-agent-desktop` at most once every seven days:
+The installed Fork checks **only the latest stable `rontian/pi-agent-desktop` Release** (at most once a week). New versions of `abcwyc/pi-agent-desktop`, `earendil-works/pi` or `agegr/pi-web` are upstream inputs, **not** automatic installation sources. The maintainer reviews and syncs them manually, then publishes an independently versioned complete installer. Tauri verifies its updater signature using this Fork's own key.
 
-- `abcwyc/pi-agent-desktop`
-- `earendil-works/pi`
-- `agegr/pi-web`
-
-The versioning and upgrade rules are:
-
-1. The latest stable `pi-agent-desktop` release is the only source used for update reminders.
-2. The upgrade button in Settings becomes enabled only when the installed desktop app version is older.
-3. When several components need updating, the release automation syncs and verifies them in the order `pi → pi-web → pi-agent-desktop`.
-4. Nothing patches an individual JavaScript package inside an installed app. The app downloads one complete signed build containing all three components at their latest versions.
-5. The app restarts after installation, so all three components land in the same verified release state at once.
-
-This keeps the components in a desktop install consistent, and avoids the runtime incompatibilities that come from swapping `pi` or `pi-web` on their own.
-
-If a new upstream version has been detected but the signed `pi-agent-desktop` release containing it is not published yet, Settings says that no signed complete build is installable for now. The app never falls back to downloading unsigned files or partially overwriting dependencies.
-
-The full sync, signing, and release configuration is described in [Desktop updates and releases](./docs/desktop-updates.md).
+A local `npm run desktop:build` produces unsigned-updater test installers; to enable in-app upgrades install a signed Fork Release once. See [Fork release manual](./docs/fork-release.zh-CN.md).
 
 ## HTTP Proxy
 
@@ -184,30 +170,19 @@ The desktop build:
 1. Generates the Next.js standalone server in an isolated directory.
 2. Bundles the Node.js runtime for the current architecture.
 3. Places the server and runtime into the app as Tauri resources.
-4. Produces `.app`, `.dmg`, and updater artifacts on Apple Silicon Macs; an NSIS `-setup.exe` plus updater artifacts on Windows x64; and a `.deb` package on Linux x64.
+4. Produces local `.app` and `.dmg` on Apple Silicon Macs, NSIS `-setup.exe` on Windows x64, or `.deb` on Linux x64, without requiring an updater signing key.
 
 On Linux, the package requires a WebKitGTK 4.1 runtime and GTK 3. It includes the Node.js runtime, so users do not need to install Node.js separately.
 
-Local builds do not register the production updater and cannot accept official updates. Official releases must inject the updater public key through GitHub Actions and sign with the matching private key.
+Unsigned-updater local builds do not register the production updater. For this Fork, sign releases **locally** with `npm run release:build:mac` and publish assets using `npm run release:publish:mac` (gh), never GitHub Actions.
 
 ## Upstream Sync And Releases
 
-The repository contains two chained automation workflows:
+- [`component-updates.yml`](./.github/workflows/component-updates.yml) remains optional/manual-only and syncs Pi SDK / pi-web with the Fork ownership boundary gate. Desktop upstream code is integrated separately via PR using [fork-sync.zh-CN.md](./docs/fork-sync.zh-CN.md).
+- [`release.yml`](./.github/workflows/release.yml) is disabled. Releases are built and signed locally on Apple Silicon macOS: `npm run release:build:mac`, then `npm run release:publish:mac` uses `gh` to upload validated assets. No GitHub Actions build or publish occurs.
+- `npm run release:prepare` advances the Fork version and regenerates the component manifest. `npm run desktop:build` produces local installers without updater signing.
 
-- [`component-updates.yml`](./.github/workflows/component-updates.yml): checks the stable releases of `pi` and `pi-web` daily. When a new version appears, it **first** intersects the incoming upstream changeset with the "upstream files this fork has modified" recorded in [`scripts/fork-ownership.json`](./scripts/fork-ownership.json), then merges the tag, updates dependencies and the component manifest, and runs the full gate (`npm test`, `tsc`, `lint`, a real standalone build).
-  - Empty intersection → commits to `main` and triggers a release.
-  - High or medium risk files hit → pushes a `sync/pi-web-<tag>` branch and opens a PR with the boundary report, and does **not** trigger a release. Merging that PR is what ships a version.
-- [`release.yml`](./.github/workflows/release.yml): after an explicit trigger from the component sync workflow, serially builds the Apple Silicon (`aarch64`) DMG, the Linux x64 `.deb`, and the Windows x64 NSIS `-setup.exe`. No Intel Mac build is produced. The release stays a draft until the updater signature files, `latest.json`, and the component manifest for all platforms are uploaded — the `manifest` job depends on the **entire** build matrix, so a failure on any platform keeps it from being published. Build failures create or update a `release-failure` issue.
-
-Upstream sync uses a Git merge, so this fork's Pi Agent branding, settings entry points, and upgrade logic survive as local modifications. Merge conflicts stop the workflow, which is the safe failure mode. The genuinely dangerous case is a **conflict-free but semantically wrong** merge: upstream changed a region this fork also changed, Git merged it cleanly, and the tests still pass. The boundary intersection above exists for exactly that case; the rules are in [Ownership boundaries](./docs/ownership-boundaries.md).
-
-A failed sync creates or updates a `component-sync-failure` issue, so nothing piles up silently.
-
-An official release additionally requires:
-
-- Tauri updater key pair.
-- Apple Developer ID signing and notarization for distribution to external users.
-- Authenticode code signing is recommended for Windows distribution to external users; an unsigned `.exe` can trigger SmartScreen warnings.
+For one-time keys, versioning, local builds, publish verification and safe recovery, use the [independent Fork release manual](./docs/fork-release.zh-CN.md). This is **not** the `npm run release` flow for upstream's npm package.
 
 ## Project Structure
 

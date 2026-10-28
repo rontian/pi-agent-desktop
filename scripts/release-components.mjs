@@ -5,7 +5,7 @@ import { fileURLToPath } from "node:url";
 export const rootDir = dirname(dirname(fileURLToPath(import.meta.url)));
 
 export const componentRepositories = {
-  "pi-agent-desktop": "abcwyc/pi-agent-desktop",
+  "pi-agent-desktop": "rontian/pi-agent-desktop",
   pi: "earendil-works/pi",
   "pi-web": "agegr/pi-web",
 };
@@ -71,6 +71,15 @@ export function nextDesktopVersion(current, releasedVersions) {
   const newest = released.reduce(
     (highest, version) => (compareVersions(version, highest) > 0 ? version : highest),
     normalizedCurrent,
+  );
+  return nextPatchVersion(newest);
+}
+
+/** A manual fork release advances beyond both the working and published versions. */
+export function nextManualDesktopVersion(current, releasedVersions) {
+  const candidates = [current, ...(releasedVersions ?? [])].map(normalizeVersion);
+  const newest = candidates.reduce(
+    (highest, version) => compareVersions(version, highest) > 0 ? version : highest,
   );
   return nextPatchVersion(newest);
 }

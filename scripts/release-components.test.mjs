@@ -6,6 +6,7 @@ import {
   isReleasePinValid,
   nextDesktopVersion,
   nextPatchVersion,
+  nextManualDesktopVersion,
   normalizeVersion,
 } from "./release-components.mjs";
 
@@ -35,6 +36,12 @@ test("never reuses a released version, including a prerelease", () => {
   assert.equal(nextDesktopVersion("0.7.3", ["0.7.2", "0.7.3", "0.7.4-rc.1"]), "0.7.5");
 });
 
+test("manual fork releases advance past the local and latest published version", () => {
+  assert.equal(nextManualDesktopVersion("0.7.7", []), "0.7.8");
+  assert.equal(nextManualDesktopVersion("0.7.7", ["0.7.9", "0.7.8"]), "0.7.10");
+  assert.equal(nextManualDesktopVersion("0.7.10", ["0.7.9"]), "0.7.11");
+});
+
 test("only accepts explicit pins for the exact bundled component version", () => {
   assert.equal(isReleasePinValid({ version: "0.8.7", reason: "Fork compatibility review" }, "0.8.7"), true);
   assert.equal(isReleasePinValid({ version: "0.8.8", reason: "Wrong version" }, "0.8.7"), false);
@@ -48,7 +55,7 @@ test("writes an auditable three-component manifest", () => {
       schemaVersion: 1,
       appVersion: "0.1.0",
       components: [
-        { id: "pi-agent-desktop", repository: "abcwyc/pi-agent-desktop", version: "0.1.0" },
+        { id: "pi-agent-desktop", repository: "rontian/pi-agent-desktop", version: "0.1.0" },
         { id: "pi", repository: "earendil-works/pi", version: "0.81.1" },
         { id: "pi-web", repository: "agegr/pi-web", version: "0.7.17" },
       ],
