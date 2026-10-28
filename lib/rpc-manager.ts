@@ -5,6 +5,7 @@ import { randomUUID } from "crypto";
 import { existsSync, realpathSync, writeFileSync } from "fs";
 import { resolve } from "path";
 import { validateAgentImages } from "./image-attachments";
+import { querySlashArgumentCompletions } from "./slash-argument-completion";
 import { invalidateModelsCache } from "./models-cache";
 import { resolveVisibleModels, selectInitialModelScope } from "./model-scope";
 import {
@@ -227,6 +228,7 @@ const COMMANDS_ALLOWED_DURING_SESSION_REPLACEMENT = new Set([
   "get_last_assistant_text",
   "get_tools",
   "get_commands",
+  "get_command_completions",
   "extension_ui_response",
   "extension_ui_input",
 ]);
@@ -667,6 +669,7 @@ export class AgentSessionWrapper {
       || type === "steer"
       || type === "follow_up"
       || type === "get_commands"
+      || type === "get_command_completions"
       || type === "get_state";
   }
 
@@ -1301,6 +1304,16 @@ export class AgentSessionWrapper {
           active: active.has(t.name),
           declarationHidden: hidden.has(t.name),
         }));
+      }
+
+      case "get_command_completions": {
+        const name = command.name;
+        const prefix = command.prefix;
+        if (typeof name !== "string" || !name || name.length > 128 || /\s/.test(name)
+          || typeof prefix !== "string" || prefix.length > 4096) return { items: [] };
+        const registered = this.inner.extensionRunner.getRegisteredCommands()
+          .find((item) => item.invocationName === name);
+        return { items: await querySlashArgumentCompletions(registered, prefix) };
       }
 
       case "get_commands": {

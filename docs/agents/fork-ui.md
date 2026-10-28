@@ -23,6 +23,14 @@ and screenshots go to the ignored `test-results/streaming-markdown/` directory.
 
 Fork-owned notes moved out of `AGENTS.md` to keep it short. The upstream doc on the same topic (`docs/agents/*.md` without the `fork-` prefix) may describe the same area in other words; where they disagree, these notes describe this fork. Hard rules that must survive a merge are also listed in `AGENTS.md` under **Hard rules**.
 
+## 通用多级斜杠命令参数补全
+
+- 输入 `/command ` 后，桌面端将光标前的**完整参数前缀**发送给当前 Session 的 `get_command_completions`，后端通过 Pi SDK `extensionRunner.getRegisteredCommands()` 查找命令并调用原插件的 `getArgumentCompletions(prefix)`。不复制命令语法，不写死 `/issue`、`/track`、`/mcp` 等命令的参数层级。
+- 插件返回的 `AutocompleteItem.value` 是**完整参数前缀的替换文本**，不是最后一个词。按参数起始位置到光标位置替换，保留光标后的草稿；返回的 `label` 与 `description` 只用于显示。没有提供回调的插件仍可正常手动输入，不能凭空推断完整命令语法或是否已可执行。
+- 每次查询防抖 140ms，忽略离开当前输入状态后的异步旧结果；最多展示 50 条。Tab / Enter 选候选只修改草稿、不发送到 Agent，Escape 关闭本轮候选。以空格结尾的候选可以直接触发下一层。
+- 不能破坏现有一级命令菜单、`@文件` 与 `#Session` 提示、中文输入法组合键、Enter/Ctrl+Enter 模式、`/mcp` 的既有分发以及 ComposerOutbox 的提交逻辑。
+- 纯函数及回调契约测试：`node --experimental-strip-types --test lib/slash-argument-completion.test.mjs`。完整验证另运行 `npm test`、`node_modules/.bin/tsc --noEmit`、`npm run lint`，并在桌面界面检查第三方命令的异步多级补全和无补全插件的正常发送。
+
 ## Conversation navigation
 ConversationNavigator 仅在右侧工作面板关闭、对话滚动区宽度至少 1024px，且正文左边距至少 64px 时显示。
 沿用 ResizeObserver 同时观察滚动区和实际正文列，因此侧栏缩放、窗口变化和正文宽度设置都会重新判断；
