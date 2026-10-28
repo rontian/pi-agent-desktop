@@ -8,10 +8,14 @@ import {
   nextPatchVersion,
   nextManualDesktopVersion,
   normalizeVersion,
+  forkReleaseTag,
+  fetchRecentReleases,
 } from "./release-components.mjs";
 
 test("normalizes GitHub release tags", () => {
   assert.equal(normalizeVersion("v0.81.1"), "0.81.1");
+  assert.equal(normalizeVersion("rontian-v0.7.7"), "0.7.7");
+  assert.equal(forkReleaseTag("0.7.7"), "rontian-v0.7.7");
   assert.equal(normalizeVersion("0.7.17"), "0.7.17");
   assert.throws(() => normalizeVersion("latest"), /Invalid release version/);
 });
@@ -33,7 +37,20 @@ test("never reuses a released version, including a prerelease", () => {
   // 0.7.4 is prepared locally but not released yet: another sync keeps it.
   assert.equal(nextDesktopVersion("0.7.4", ["0.7.2", "0.7.3"]), "0.7.4");
   assert.equal(nextDesktopVersion("0.7.4", ["0.7.3", "0.7.4"]), "0.7.5");
+  assert.equal(nextDesktopVersion("0.7.7", []), "0.7.7");
+  assert.equal(nextDesktopVersion("0.7.7", ["0.7.8"]), "0.7.9");
   assert.equal(nextDesktopVersion("0.7.3", ["0.7.2", "0.7.3", "0.7.4-rc.1"]), "0.7.5");
+});
+
+test("Fork release discovery ignores upstream tags imported by synchronization", async () => {
+  const releases = await fetchRecentReleases("rontian/pi-agent-desktop", {
+    fetcher: async () => new Response(JSON.stringify([
+      {tag_name: "v0.7.7", draft: false},
+      {tag_name: "rontian-v0.7.7", draft: false},
+      {tag_name: "rontian-v0.7.8", draft: true},
+    ]), { status: 200 }),
+  });
+  assert.deepEqual(releases.map((x) => x.version), ["0.7.7"]);
 });
 
 test("manual fork releases advance past the local and latest published version", () => {

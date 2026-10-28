@@ -176,7 +176,7 @@ npm run desktop:build
 
 - [`component-updates.yml`](./.github/workflows/component-updates.yml) 仍可选手动触发，只用于 Pi SDK 与 pi-web 组件同步；与桌面上游的合并另走分支 PR，遵循 [桌面上游同步手册](./docs/fork-sync.zh-CN.md) 和 Fork ownership 规则。
 - [`release.yml`](./.github/workflows/release.yml) **仅手动触发**，已禁用。正式发行仅在本地 Apple Silicon Mac 上执行 `npm run release:build:mac` 生成签名更新资产，然后使用 `npm run release:publish:mac` 通过 gh 上传并发布稳定 Release。
-- `npm run release:prepare` 递增本 Fork 版本、更新组件清单；`npm run desktop:build` 只用于无 Updater 签名的本地构建。
+- `npm run release:prepare` 保留尚未发布的版本号，已发布才自动递增，并更新组件清单；`npm run release:check` 自动运行全部检查。发行 tag 是 `rontian-v<版本>`，不覆盖上游 `v<版本>`；`npm run desktop:build` 只用于无 Updater 签名的本地构建。
 
 首次配置、密钥备份、版本、正式发布和失败恢复步骤见 [Fork 独立发行手册](./docs/fork-release.zh-CN.md)。**不要使用 GitHub Actions 或 `npm run release` 发布桌面应用**；那是上游 pi-web 的 npm 发布脚本。
 

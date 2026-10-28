@@ -2,6 +2,8 @@
 
 **唯一正式发行流程：在维护者自己的 Apple Silicon Mac 构建、签名、验证，再用 gh 上传到 rontian/pi-agent-desktop 的 GitHub Release。** GitHub 仅保存仓库和二进制资产；不使用 GitHub Actions 编译、签名或发布。旧的 release.yml 已禁用。
 
+**Tag 规则：上游 `v0.7.7` 等标签属于同步源码，永不覆盖或强制推送；本 Fork 使用 `rontian-v<应用版本>`（首发 `rontian-v0.7.7`）。应用内部版本仍为 `0.7.7`。**
+
 本 Fork 只跟踪自己的稳定 Release，Tauri Updater 也只访问 https://github.com/rontian/pi-agent-desktop/releases/latest/download/latest.json。桌面源码上游 abcwyc/pi-agent-desktop、Pi SDK（earendil-works/pi）与 pi-web（agegr/pi-web）仅作为**手动同步来源**。同步不等于发布。
 
 ## 两种签名
@@ -23,23 +25,17 @@ npx tauri signer generate -w ~/.tauri/rontian-pi-agent.key
 
 生成带密码的 Tauri 密钥对，私钥路径为 ~/.tauri/rontian-pi-agent.key，公钥路径为 ~/.tauri/rontian-pi-agent.key.pub。请**单独、安全、离线备份密钥和密码**，不要存入 Git、脚本、仓库、终端命令历史或 GitHub Actions Secrets。此流程完全不需要 GitHub Actions Secrets。私钥丢失后已安装的旧版本无法验证新私钥生成的更新。
 
-发布命令运行时需要私钥密码。zsh 的一种不写入命令历史的方式是：
+正式执行 `npm run release:build:mac` 时，脚本**优先使用已经 export 的 `TAURI_SIGNING_PRIVATE_KEY_PASSWORD`**，并在开始耗时构建之前用 Tauri signer 对临时测试文件验证密码。如果密码正确，不再提问；如果变量不存在或密码错误，会在交互式终端中隐藏输入并重新验证（最多 3 次交互输入）。密钥文件异常或签名工具错误则直接报错，不能靠重复输入密码解决。不需要反复导出环境变量，也不要将密码写在命令行、脚本、`.env` 或 Git 中。
 
-```bash
-read -rs "TAURI_SIGNING_PRIVATE_KEY_PASSWORD?Updater 密码: "
-echo
-export TAURI_SIGNING_PRIVATE_KEY_PASSWORD
-```
-
-请不要把密码写进 .env 文件。签名构建脚本默认从上述密钥路径读取公钥和私钥；也可通过 PI_AGENT_RELEASE_KEY_PATH 指向其他可信路径。脚本只在本地子进程环境中注入公钥与密钥路径，不修改已跟踪的 tauri.conf.json。
+签名密钥的路径与公钥由脚本读取，**不需要手动导出 `TAURI_SIGNING_PRIVATE_KEY` 或 `PI_AGENT_DESKTOP_UPDATER_PUBLIC_KEY`**。签名构建脚本默认从上述密钥路径读取公钥和私钥；也可通过 PI_AGENT_RELEASE_KEY_PATH 指向其他可信路径。脚本只在本地子进程环境中注入公钥与密钥路径，不修改已跟踪的 tauri.conf.json。
 
 ## 日常手动同步上游
 
 1. 以 origin/main 为基线创建同步分支，按 [fork-sync.zh-CN.md](./fork-sync.zh-CN.md) 合并桌面上游的更新。Pi SDK/ pi-web 升级另按仓库的组件来源处理。
 2. 审查 [ownership-boundaries.md](./ownership-boundaries.md) 和 scripts/fork-ownership.json，确保本 Fork 的 UI/命令补全等扩展没有因合并丢失。
 3. 运行必要测试，创建 PR，合并到 main。**上游同步不会自动发版。**
-4. 想发布时在版本分支运行一次 `npm run release:prepare`：它将版本 patch 往前推进，并刷新 Cargo 版本与 component-versions.json（例如 0.7.7 → 0.7.8）。不要重复执行，否则版本继续增加。
-5. 校验 `npm run release:verify`、`npm test`、`npx tsc --noEmit`、`npm run lint`、`npm run drift`，将准备版本的 PR 合并 main。不要使用上游 `npm run release`（它负责 npm publish）。
+4. 在版本分支运行 `npm run release:prepare`：当前版本尚无本 Fork Release 时**原样保留**（首发 0.7.7），否则自动递增 patch（下一版 0.7.8）；并刷新组件清单。无需手改版本，也不要修改上游 tag。
+5. 运行 `npm run release:check`，自动依次执行测试、TypeScript、lint、drift、发行组件校验和 diff check；将准备版本的 PR 合并 main。不要使用上游 `npm run release`（它负责 npm publish）。
 
 ```bash
 git fetch origin
@@ -48,11 +44,7 @@ git pull --ff-only origin main
 git switch -c release/next-desktop
 npm ci
 npm run release:prepare
-npm run release:verify
-npm test
-npx tsc --noEmit
-npm run lint
-npm run drift
+npm run release:check
 # 查看、提交、推送版本变更并通过 PR 合并到 main
 ```
 
@@ -89,7 +81,7 @@ npm run release:build:mac
 
 `release:build:mac` 会：
 - 强制当前为干净的 main / Apple Silicon Mac，检查密钥、公钥格式和密码；
-- 校验组件和版本，再准备 Next.js standalone；
+- 运行完整 `npm run release:check`，再准备 Next.js standalone；
 - 使用本地 Tauri 构建完整 App/DMG、签名的 `Pi Agent.app.tar.gz` 和 `.sig`；
 - 通过临时命令行配置注入 Fork Updater 公钥，不写入受 Git 管理的 Tauri 配置；
 - 生成 `src-tauri/target/release/bundle/local-release/latest.json`（仅 `darwin-aarch64`）及 `release-build.json`（版本、提交 SHA 和资产 SHA256）。
@@ -115,10 +107,10 @@ npm run release:publish:mac
 成功后：
 
 ```bash
-gh release view "v$(node -p "require('./src-tauri/pi-agent-desktop-package.json').version")" --repo rontian/pi-agent-desktop
+gh release view "rontian-v$(node -p "require('./src-tauri/pi-agent-desktop-package.json').version")" --repo rontian/pi-agent-desktop
 ```
 
-已有同名 Release/Draft 时脚本拒绝自动覆盖，请人工核查已有资产、标签与构建来源。Release 资产默认使用 gh 的自动生成说明，可在发布前后使用 gh release edit 调整说明。
+已有同名 Release/Draft 或 tag 指向不同提交时，脚本拒绝自动覆盖，绝不使用 `-f`，请人工核查已有资产、标签与构建来源。Release 资产默认使用 gh 的自动生成说明，可在发布前后使用 gh release edit 调整说明。
 
 ## 首次迁移与后续更新
 

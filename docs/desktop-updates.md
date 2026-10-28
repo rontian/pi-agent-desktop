@@ -1,5 +1,7 @@
 # Desktop release updates — rontian Fork
 
+本 Fork 专属发行 tag 为 `rontian-v<版本>`（例如 `rontian-v0.7.7`）；上游的 `v0.7.7` 保留不动。
+
 本 Fork 的发行说明以 [独立发行手册](./fork-release.zh-CN.md) 为准。
 
 - 发行及自动更新仓库：`rontian/pi-agent-desktop`，独立于原桌面上游 `abcwyc/pi-agent-desktop`。

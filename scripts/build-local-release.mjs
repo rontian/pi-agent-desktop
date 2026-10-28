@@ -4,8 +4,9 @@ import { execFileSync, spawnSync } from "node:child_process";
 import { readFile, mkdir, rm, writeFile, copyFile } from "node:fs/promises";
 import { homedir } from "node:os";
 import { join, resolve } from "node:path";
-import { rootDir } from "./release-components.mjs";
+import { rootDir, forkReleaseTag } from "./release-components.mjs";
 import { validateUpdaterPublicKey } from "./configure-updater-public-key.mjs";
+import { resolveSigningPassword, promptSigningPassword, verifySigningPasswordWithTauri } from "./local-signing-password.mjs";
 import {
   macReleaseAssets, uploadAssetPaths, createMacUpdaterManifest, describeFile, RELEASE_LATEST_PATH, RELEASE_METADATA_PATH, RELEASE_UPLOAD_DIR,
 } from "./local-release.mjs";
@@ -27,19 +28,22 @@ const version = JSON.parse(await readFile(join(rootDir, "src-tauri", "pi-agent-d
 const keyFile = resolve(process.env.PI_AGENT_RELEASE_KEY_PATH || join(homedir(), ".tauri", "rontian-pi-agent.key"));
 const publicKey = validateUpdaterPublicKey(await readFile(keyFile + ".pub", "utf8"));
 await readFile(keyFile); // Fail before expensive build if the private key is missing.
-if (!process.env.TAURI_SIGNING_PRIVATE_KEY_PASSWORD) {
-  throw new Error("Set TAURI_SIGNING_PRIVATE_KEY_PASSWORD in this terminal (read -rs on zsh). Do not store it in Git.");
-}
+const signingPassword = await resolveSigningPassword({
+  initialPassword: process.env.TAURI_SIGNING_PRIVATE_KEY_PASSWORD,
+  verifyPassword: (password) => verifySigningPasswordWithTauri({ rootDir, keyFile, password }),
+  promptPassword: promptSigningPassword,
+  onWrongPassword: () => console.error("Updater signing password is incorrect; please enter it again."),
+});
 const env = {
   ...process.env,
   TAURI_SIGNING_PRIVATE_KEY: keyFile,
-  TAURI_SIGNING_PRIVATE_KEY_PASSWORD: process.env.TAURI_SIGNING_PRIVATE_KEY_PASSWORD,
+  TAURI_SIGNING_PRIVATE_KEY_PASSWORD: signingPassword,
   PI_AGENT_DESKTOP_UPDATER_PUBLIC_KEY: publicKey,
   APPLE_SIGNING_IDENTITY: process.env.APPLE_SIGNING_IDENTITY || "-",
 };
 const assets = macReleaseAssets(version);
 const upload = uploadAssetPaths(version);
-run("npm", ["run", "release:verify"]);
+run("npm", ["run", "release:check"]);
 run("npm", ["run", "desktop:prepare"]);
 // Prevent a failed build from mistakenly reusing stale artifacts from an earlier run.
 for (const path of [assets.dmg, assets.archive, assets.signature, upload.dmg, upload.archive, upload.signature, RELEASE_LATEST_PATH, RELEASE_METADATA_PATH]) {
@@ -60,7 +64,7 @@ for (const [name, path] of Object.entries({
   files[name] = await describeFile(path);
 }
 await writeFile(RELEASE_METADATA_PATH, JSON.stringify({
-  version, commit, repository: "rontian/pi-agent-desktop", files,
+  version, tag: forkReleaseTag(version), commit, repository: "rontian/pi-agent-desktop", files,
 }, null, 2) + "\n");
 console.log("Signed macOS release is ready locally at " + RELEASE_METADATA_PATH);
 console.log("Next: npm run release:publish:mac (uploads assets using gh, after review).");

@@ -1,7 +1,7 @@
 import { createHash } from "node:crypto";
 import { readFile, stat } from "node:fs/promises";
 import { basename, join } from "node:path";
-import { rootDir, normalizeVersion } from "./release-components.mjs";
+import { rootDir, normalizeVersion, forkReleaseTag } from "./release-components.mjs";
 
 export const RELEASE_REPO = "rontian/pi-agent-desktop";
 export const RELEASE_DIR = join(rootDir, "src-tauri", "target", "release", "bundle");
@@ -29,8 +29,8 @@ export function macReleaseAssets(version) {
 }
 
 export function githubAssetUrl(version, filename) {
-  return "https://github.com/" + RELEASE_REPO + "/releases/download/v"
-    + normalizeVersion(version) + "/" + encodeURIComponent(basename(filename));
+  return "https://github.com/" + RELEASE_REPO + "/releases/download/"
+    + forkReleaseTag(version) + "/" + encodeURIComponent(basename(filename));
 }
 
 export function createMacUpdaterManifest(version, signature) {
@@ -63,6 +63,7 @@ export async function describeFile(path) {
 
 export async function verifyBuildAssets(metadata) {
   if (!metadata || typeof metadata !== "object") throw new Error("Invalid release-build.json");
+  if (metadata.tag !== forkReleaseTag(metadata.version)) throw new Error("Release tag does not match Fork version");
   const paths = uploadAssetPaths(metadata.version);
   const selected = {
     dmg: paths.dmg,
