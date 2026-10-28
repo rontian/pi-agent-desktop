@@ -3,7 +3,10 @@
 import { useEffect, useId, useState } from "react";
 import { useFonts } from "@/hooks/useFonts";
 import { useI18n } from "@/hooks/useI18n";
-import { DEFAULT_FONTS, isFontFamily, MONO_FONT_OPTIONS, UI_FONT_OPTIONS } from "@/lib/font-preferences";
+import {
+  DEFAULT_FONTS, isFontFamily, MONO_FONT_OPTIONS, UI_FONT_OPTIONS,
+  UI_FONT_SIZE_DEFAULT, UI_FONT_SIZE_MAX, UI_FONT_SIZE_MIN,
+} from "@/lib/font-preferences";
 import { isImeComposing } from "@/lib/ime";
 import { isTauriDesktop, listInstalledFontsNative } from "@/lib/desktop-native";
 import { installedFontLabel, type InstalledFont } from "@/lib/installed-fonts";
@@ -68,6 +71,7 @@ function FontChoice({ value, kind, installed, onChange }: { value: string; kind:
 export function FontSettings() {
   const { t } = useI18n();
   const { fonts, setFonts, saving, error, retry } = useFonts();
+  const uiSize = fonts.uiSize ?? UI_FONT_SIZE_DEFAULT;
   const [installed, setInstalled] = useState<InstalledFont[] | null>(null);
   const [fontListError, setFontListError] = useState(false);
   const [reload, setReload] = useState(0);
@@ -83,7 +87,7 @@ export function FontSettings() {
     <section className="settings-general-section settings-font-section" aria-labelledby="settings-font-heading">
       <div className="settings-font-heading-row">
         <h3 className="settings-general-heading" id="settings-font-heading">{t("settings.fonts")}</h3>
-        {(fonts.ui || fonts.mono) && <ConfigButton variant="ghost" size="small" onClick={() => setFonts(DEFAULT_FONTS)}>
+        {(fonts.ui || fonts.mono) && <ConfigButton variant="ghost" size="small" onClick={() => setFonts({ ...DEFAULT_FONTS, ...(fonts.uiSize === undefined ? {} : { uiSize: fonts.uiSize }) })}>
           {t("settings.fontReset")}
         </ConfigButton>}
       </div>
@@ -91,6 +95,24 @@ export function FontSettings() {
       <div className="settings-option-list">
         <FontChoice kind="ui" installed={installed} value={fonts.ui} onChange={(ui) => setFonts({ ...fonts, ui })} />
         <FontChoice kind="mono" installed={installed} value={fonts.mono} onChange={(mono) => setFonts({ ...fonts, mono })} />
+        <div className="settings-option settings-ui-size-option">
+          <span className="settings-option-text">
+            <label className="settings-option-title" htmlFor="settings-ui-font-size">{t("settings.uiFontSize")}</label>
+            <span className="settings-option-hint">{t("settings.uiFontSizeHint")}</span>
+          </span>
+          <div className="settings-ui-size-control">
+            <div className="settings-ui-size-value">
+              <output htmlFor="settings-ui-font-size">{uiSize}px</output>
+              <ConfigButton variant="ghost" size="small" disabled={uiSize === UI_FONT_SIZE_DEFAULT}
+                onClick={() => setFonts({ ...fonts, uiSize: UI_FONT_SIZE_DEFAULT })}>
+                {t("settings.resetUiFontSize")}
+              </ConfigButton>
+            </div>
+            <input id="settings-ui-font-size" aria-label={t("settings.uiFontSize")}
+              type="range" min={UI_FONT_SIZE_MIN} max={UI_FONT_SIZE_MAX} step={1}
+              value={uiSize} onChange={(event) => setFonts({ ...fonts, uiSize: Number(event.target.value) })} />
+          </div>
+        </div>
         <div className="settings-font-preview" aria-label={t("settings.fontPreview")}>
           <p>{t("settings.fontPreviewText")}</p>
           <code>{'const message = "Hello, Pi"; // 0123456789'}</code>
