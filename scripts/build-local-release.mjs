@@ -27,13 +27,32 @@ const version = JSON.parse(await readFile(join(rootDir, "src-tauri", "pi-agent-d
 const keyFile = resolve(process.env.PI_AGENT_RELEASE_KEY_PATH || join(homedir(), ".tauri", "rontian-pi-agent.key"));
 const publicKey = validateUpdaterPublicKey(await readFile(keyFile + ".pub", "utf8"));
 await readFile(keyFile); // Fail before expensive build if the private key is missing.
-if (!process.env.TAURI_SIGNING_PRIVATE_KEY_PASSWORD) {
-  throw new Error("Set TAURI_SIGNING_PRIVATE_KEY_PASSWORD in this terminal (read -rs on zsh). Do not store it in Git.");
+function signingPassword() {
+  if (process.env.TAURI_SIGNING_PRIVATE_KEY_PASSWORD) return process.env.TAURI_SIGNING_PRIVATE_KEY_PASSWORD;
+  // Read from the controlling terminal without echo or writing the secret to a file.
+  // stdout is captured only in memory; the password never appears in process args.
+  const prompt = [
+    "IFS= read -r -s -p 'Tauri Updater signing password: ' password </dev/tty || exit 1",
+    "printf '\\n' >/dev/tty",
+    "printf '%s' \"$password\"",
+  ].join("\n");
+  let value;
+  try {
+    value = execFileSync("/bin/bash", ["-c", prompt], {
+      cwd: rootDir,
+      encoding: "utf8",
+      stdio: ["ignore", "pipe", "inherit"],
+    });
+  } catch {
+    throw new Error("Cannot read signing password from /dev/tty. Run in an interactive terminal, or set TAURI_SIGNING_PRIVATE_KEY_PASSWORD.");
+  }
+  if (!value) throw new Error("The signing password must not be empty.");
+  return value;
 }
 const env = {
   ...process.env,
   TAURI_SIGNING_PRIVATE_KEY: keyFile,
-  TAURI_SIGNING_PRIVATE_KEY_PASSWORD: process.env.TAURI_SIGNING_PRIVATE_KEY_PASSWORD,
+  TAURI_SIGNING_PRIVATE_KEY_PASSWORD: signingPassword(),
   PI_AGENT_DESKTOP_UPDATER_PUBLIC_KEY: publicKey,
   APPLE_SIGNING_IDENTITY: process.env.APPLE_SIGNING_IDENTITY || "-",
 };
