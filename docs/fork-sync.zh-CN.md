@@ -1,6 +1,7 @@
 # 与桌面上游同步，同时保留本地 UI
 
 > 本 Fork 的签名发布与更新流程见 [独立发行手册](./fork-release.zh-CN.md)，同步上游后不会自动发布。
+> **pi-web 是另一条上游线**：同步 `agegr/pi-web` Release tag 时，请使用 [可暂停、可恢复的本地同步脚本](./fork-pi-web-local-sync.zh-CN.md)，而不是下面用于桌面上游的命令。
 
 ## 两条更新来源
 
