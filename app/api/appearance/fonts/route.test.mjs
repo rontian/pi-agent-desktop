@@ -23,7 +23,7 @@ test("font saves and resets preserve backgrounds and other Pi Web preferences", 
   assert.deepEqual(await (await GET()).json(), { fonts: null });
   await mkdir(join(dir, "pi-web"), { recursive: true });
   await writeFile(file, JSON.stringify({ background: "mist", artifactsPrompt: false, other: { keep: true } }));
-  for (const fonts of [{ ui: "Microsoft YaHei", mono: "Consolas" }, { ui: "思源黑体 CN", mono: "JetBrains Mono" }, { ui: "", mono: "" }]) {
+  for (const fonts of [{ ui: "Microsoft YaHei", mono: "Consolas" }, { ui: "思源黑体 CN", mono: "JetBrains Mono", uiSize: 16 }, { ui: "", mono: "" }]) {
     assert.equal((await PUT(request(JSON.stringify({ fonts })))).status, 200);
     assert.deepEqual(await (await GET()).json(), { fonts });
     const stored = JSON.parse(await readFile(file, "utf8"));
@@ -41,6 +41,8 @@ test("untrusted, malformed and CSS-like font values never change the settings fi
     ["{", {}, 400], ["null", {}, 400], ['{"fonts":{}}', {}, 400],
     ['{"fonts":{"ui":"Arial; color:red","mono":""}}', {}, 400],
     ['{"fonts":{"ui":"Arial","mono":12}}', {}, 400],
+    ['{"fonts":{"ui":"Arial","mono":"","uiSize":19}}', {}, 400],
+    ['{"fonts":{"ui":"Arial","mono":"","uiSize":"16"}}', {}, 400],
   ]) {
     assert.equal((await PUT(request(body, headers))).status, status);
     assert.equal(await readFile(file, "utf8"), before);
