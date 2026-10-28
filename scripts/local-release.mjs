@@ -68,7 +68,7 @@ export async function verifyBuildAssets(metadata) {
     dmg: paths.dmg,
     archive: paths.archive,
     signature: paths.signature,
-    componentManifest: paths.componentManifest,
+    componentManifest: macReleaseAssets(metadata.version).componentManifest,
     latest: RELEASE_LATEST_PATH,
   };
   for (const [key, path] of Object.entries(selected)) {
