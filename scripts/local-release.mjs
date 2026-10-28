@@ -29,7 +29,7 @@ export function macReleaseAssets(version) {
 }
 
 export function githubAssetUrl(version, filename) {
-  return "https://github.com/" + RELEASE_REPO + "/releases/download/v"
+  return "https://github.com/" + RELEASE_REPO + "/releases/download/"
     + forkReleaseTag(version) + "/" + encodeURIComponent(basename(filename));
 }
 
