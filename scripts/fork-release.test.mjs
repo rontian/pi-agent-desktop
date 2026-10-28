@@ -2,7 +2,7 @@ import assert from "node:assert/strict";
 import { readFile } from "node:fs/promises";
 import { join } from "node:path";
 import test from "node:test";
-import { componentRepositories, nextManualDesktopVersion, rootDir } from "./release-components.mjs";
+import { componentRepositories, nextDesktopVersion, rootDir } from "./release-components.mjs";
 
 const read = (path) => readFile(join(rootDir, path), "utf8");
 
@@ -25,8 +25,9 @@ test("local packaging cannot demand the production updater signing key", async (
   assert.equal(local.bundle.createUpdaterArtifacts, false);
   const pkg = JSON.parse(await read("package.json"));
   assert.match(pkg.scripts["desktop:build"], /tauri\.local\.conf\.json/);
-  assert.match(pkg.scripts["release:prepare"], /--next-patch/);
-  assert.equal(nextManualDesktopVersion("0.7.7", []), "0.7.8");
+  assert.doesNotMatch(pkg.scripts["release:prepare"], /--next-patch/);
+  assert.match(pkg.scripts["release:check"], /npm test.*tsc --noEmit.*npm run lint.*npm run drift.*release:verify/);
+  assert.equal(nextDesktopVersion("0.7.7", []), "0.7.7");
 });
 
 test("GitHub Actions release is disabled; macOS release uses local gh scripts", async () => {
@@ -46,8 +47,11 @@ test("local updater manifest targets the signed macOS archive on this fork", asy
   assert.deepEqual(Object.keys(data.platforms), ["darwin-aarch64"]);
   assert.equal(data.platforms["darwin-aarch64"].signature, "signature-example");
   assert.equal(data.platforms["darwin-aarch64"].url,
-    "https://github.com/rontian/pi-agent-desktop/releases/download/v0.7.8/Pi.Agent.app.tar.gz");
+    "https://github.com/rontian/pi-agent-desktop/releases/download/rontian-v0.7.8/Pi.Agent.app.tar.gz");
   assert.equal(githubAssetUrl("0.7.8", "Pi.Agent.app.tar.gz"),
     data.platforms["darwin-aarch64"].url);
   assert.throws(() => createMacUpdaterManifest("0.7.8", ""), /signature/i);
+  const publishScript = await read("scripts/publish-local-release.mjs");
+  assert.match(publishScript, /forkReleaseTag\(version\)/);
+  assert.doesNotMatch(publishScript, /push.*--force|push.*-f/);
 });
