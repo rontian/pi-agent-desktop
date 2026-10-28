@@ -73,7 +73,7 @@ export async function uploadAssetWithProgress({ uploadUrl, path, token, spawnPro
   const responsePath = join(dir, "upload-response.json");
   try {
     const args = ["--config", "-", "--progress-bar", "--show-error",
-      "--connect-timeout", "30", "--fail", "--no-location"];
+      "--connect-timeout", "30", "--fail"];
     const child = spawnProcess("curl", args, { stdio: ["pipe", "pipe", "inherit"] });
     const config = buildCurlConfig({ uploadUrl, path, token, responsePath });
     const started = Date.now();
