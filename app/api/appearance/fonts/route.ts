@@ -23,7 +23,10 @@ export async function PUT(req: Request) {
   if (!isFontPreferences(fonts)) return NextResponse.json({ error: "Invalid fonts" }, { status: 400 });
   try {
     writeFontPreferences(fonts);
-    return NextResponse.json({ fonts: { ui: fonts.ui, mono: fonts.mono } });
+    return NextResponse.json({ fonts: {
+      ui: fonts.ui, mono: fonts.mono,
+      ...(fonts.uiSize === undefined ? {} : { uiSize: fonts.uiSize }),
+    } });
   } catch {
     return NextResponse.json({ error: "Could not save font settings" }, { status: 500 });
   }
