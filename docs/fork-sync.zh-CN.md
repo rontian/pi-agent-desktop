@@ -1,8 +1,10 @@
 # 与桌面上游同步，同时保留本地 UI
 
+> 本 Fork 的签名发布与更新流程见 [独立发行手册](./fork-release.zh-CN.md)，同步上游后不会自动发布。
+
 ## 两条更新来源
 
-- `origin`：自己的 fork，`martin666888/pi-agent-desktop`。定制通过 PR 合入这里的 `main`。
+- `origin`：自己的 fork，`rontian/pi-agent-desktop`。定制通过 PR 合入这里的 `main`。
 - `upstream`：桌面上游，`abcwyc/pi-agent-desktop`。功能修复和桌面版本从这里合入。
 - pi-web / Pi SDK 的组件更新是另一层；现有 `component-updates.yml` 处理的是这一层，
   不代替与桌面上游的同步。它目前需要手动触发，不会自动完成本 fork 的 UI 整合。
@@ -70,7 +72,7 @@ git diff --check
 git add --all
 git commit
 git push -u origin HEAD
-gh pr create --repo martin666888/pi-agent-desktop --base main
+gh pr create --repo rontian/pi-agent-desktop --base main
 ```
 
 `6fcd7d4` 是当前 pi-web 样式基线，不是桌面版本；只有同时更新 pi-web 时才换成

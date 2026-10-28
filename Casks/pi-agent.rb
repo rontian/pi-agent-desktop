@@ -2,10 +2,10 @@ cask "pi-agent" do
   version "0.7.7"
   sha256 "5e415f1db3e4249b5827e594660175de98d9a0ef35406f5750a4500f0a43caf5"
 
-  url "https://github.com/abcwyc/pi-agent-desktop/releases/download/v#{version}/Pi.Agent_#{version}_aarch64.dmg"
+  url "https://github.com/rontian/pi-agent-desktop/releases/download/v#{version}/Pi.Agent_#{version}_aarch64.dmg"
   name "Pi Agent"
   desc "Local AI agent desktop app built on pi"
-  homepage "https://github.com/abcwyc/pi-agent-desktop"
+  homepage "https://github.com/rontian/pi-agent-desktop"
 
   livecheck do
     url :url
