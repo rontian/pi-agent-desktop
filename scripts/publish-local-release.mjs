@@ -3,7 +3,7 @@
 import { execFileSync, spawnSync } from "node:child_process";
 import { readFile } from "node:fs/promises";
 import { rootDir, forkReleaseTag } from "./release-components.mjs";
-import { RELEASE_METADATA_PATH, RELEASE_LATEST_PATH, verifyBuildAssets } from "./local-release.mjs";
+import { RELEASE_METADATA_PATH, RELEASE_LATEST_PATH, verifyBuildAssets, macReleaseAssets } from "./local-release.mjs";
 
 const REPO = "rontian/pi-agent-desktop";
 function capture(cmd, args) {
@@ -33,6 +33,11 @@ if (metadata.commit !== head || metadata.repository !== REPO) {
 const version = JSON.parse(await readFile("src-tauri/pi-agent-desktop-package.json", "utf8")).version;
 if (metadata.version !== version) throw new Error("Built version is no longer current. Rebuild.");
 const paths = await verifyBuildAssets(metadata);
+// Recheck the exact local notarized .app before creating or pushing any tag.
+const app = macReleaseAssets(version).app;
+run("codesign", ["--verify", "--deep", "--strict", "--verbose=2", app]);
+run("xcrun", ["stapler", "validate", app]);
+run("spctl", ["--assess", "--type", "execute", "--verbose=4", app]);
 const tag = forkReleaseTag(version);
 const exists = spawnSync("gh", ["release", "view", tag, "--repo", REPO], { cwd: rootDir, stdio: "ignore" });
 if (exists.status === 0) throw new Error("Release " + tag + " already exists (possibly a draft). Inspect it before retrying.");
