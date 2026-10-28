@@ -1,5 +1,7 @@
 # Release Checklist
 
+> **Upstream npm-only checklist.** This does **not** publish the `rontian/pi-agent-desktop` Tauri app. For the independent Fork, use [fork-release.zh-CN.md](./fork-release.zh-CN.md), `npm run release:prepare`, and the manually dispatched `release.yml` workflow.
+
 This repo publishes two artifacts for each release:
 
 - npm package: `@agegr/pi-web`

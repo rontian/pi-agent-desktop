@@ -266,6 +266,7 @@
     "reduce": "Drift that can be removed without losing anything — desktop-only code that belongs in components/desktop/, or fork additions sitting in an upstream file that can move to a fork-owned one. Act on these."
   },
   "decisionLog": [
+    "2026-10-28 — Independent rontian desktop releases keep upstream source synchronization separate from user updates. Fork-owned release scripts and Tauri override handle local unsigned-updater packages, while the original signed matrix only publishes complete validated releases using the fork\u0027s own key and GitHub Release.",
     "2026-10-28 — Progressive slash argument completion now invokes each extension's native getArgumentCompletions(prefix) from the in-process SDK session. New fork-owned completion helper isolates parsing and candidate replacement; existing high-risk ChatInput/useAgentSession/rpc-manager wiring remains narrow to preserve upstream sync.",
     "2026-10-21 — MarkdownBody now integrates @lobehub/streamdown through fork-owned StreamingMarkdown and useStreamingMarkdown, retaining Pi's remark/rehype pipeline, widgets, final-text flush and document-scoped fallbacks. Stable block caching and paced word fades replace full-document parsing on every streamed snapshot; no Lobe UI theme is imported. Browser replay measures parse volume against the former 120ms strategy.",
     "2026-07-26 — lib/api-types.ts: fork update types moved to lib/app-update-types.ts; file now matches upstream and left the manifest.",
