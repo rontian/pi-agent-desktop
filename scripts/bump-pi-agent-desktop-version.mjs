@@ -2,7 +2,9 @@ import { readFile, writeFile } from "node:fs/promises";
 import { join } from "node:path";
 import {
   fetchRecentReleases,
+  componentRepositories,
   nextDesktopVersion,
+  nextManualDesktopVersion,
   normalizeVersion,
   rootDir,
 } from "./release-components.mjs";
@@ -12,8 +14,15 @@ const cargoPath = join(rootDir, "src-tauri", "Cargo.toml");
 const lockPath = join(rootDir, "src-tauri", "Cargo.lock");
 const desktopPackage = JSON.parse(await readFile(packagePath, "utf8"));
 const current = normalizeVersion(desktopPackage.version);
-const released = await fetchRecentReleases("abcwyc/pi-agent-desktop", { allowMissing: true });
-const next = nextDesktopVersion(current, released.map((release) => release.version));
+const args = process.argv.slice(2);
+if (args.some((arg) => arg !== "--next-patch") || args.length > 1) {
+  throw new Error("Usage: node scripts/bump-pi-agent-desktop-version.mjs [--next-patch]");
+}
+const released = await fetchRecentReleases(componentRepositories["pi-agent-desktop"], { allowMissing: true });
+const releasedVersions = released.map((release) => release.version);
+const next = args.includes("--next-patch")
+  ? nextManualDesktopVersion(current, releasedVersions)
+  : nextDesktopVersion(current, releasedVersions);
 
 desktopPackage.version = next;
 await writeFile(packagePath, `${JSON.stringify(desktopPackage, null, 2)}\n`);
