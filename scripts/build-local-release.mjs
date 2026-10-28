@@ -1,13 +1,13 @@
 #!/usr/bin/env node
 // Build and sign a complete macOS release locally. Never writes signing keys into Git.
 import { execFileSync, spawnSync } from "node:child_process";
-import { readFile, mkdir, rm, writeFile } from "node:fs/promises";
+import { readFile, mkdir, rm, writeFile, copyFile } from "node:fs/promises";
 import { homedir } from "node:os";
 import { join, resolve } from "node:path";
 import { rootDir } from "./release-components.mjs";
 import { validateUpdaterPublicKey } from "./configure-updater-public-key.mjs";
 import {
-  macReleaseAssets, createMacUpdaterManifest, describeFile, RELEASE_LATEST_PATH, RELEASE_METADATA_PATH,
+  macReleaseAssets, uploadAssetPaths, createMacUpdaterManifest, describeFile, RELEASE_LATEST_PATH, RELEASE_METADATA_PATH, RELEASE_UPLOAD_DIR,
 } from "./local-release.mjs";
 
 function run(program, args, env = process.env) {
@@ -38,21 +38,24 @@ const env = {
   APPLE_SIGNING_IDENTITY: process.env.APPLE_SIGNING_IDENTITY || "-",
 };
 const assets = macReleaseAssets(version);
+const upload = uploadAssetPaths(version);
 run("npm", ["run", "release:verify"]);
 run("npm", ["run", "desktop:prepare"]);
 // Prevent a failed build from mistakenly reusing stale artifacts from an earlier run.
-for (const path of [assets.dmg, assets.archive, assets.signature, RELEASE_LATEST_PATH, RELEASE_METADATA_PATH]) {
+for (const path of [assets.dmg, assets.archive, assets.signature, upload.dmg, upload.archive, upload.signature, RELEASE_LATEST_PATH, RELEASE_METADATA_PATH]) {
   await rm(path, { force: true });
 }
 const tauriConfig = JSON.stringify({ plugins: { updater: { pubkey: publicKey } } });
 run("npx", ["tauri", "build", "--bundles", "app,dmg", "--config", tauriConfig], env);
-const signature = (await readFile(assets.signature, "utf8")).trim();
+await mkdir(RELEASE_UPLOAD_DIR, { recursive: true });
+for (const kind of ["dmg", "archive", "signature"]) await copyFile(assets[kind], upload[kind]);
+const signature = (await readFile(upload.signature, "utf8")).trim();
 const latest = createMacUpdaterManifest(version, signature);
 await mkdir(join(rootDir, "src-tauri", "target", "release", "bundle", "local-release"), { recursive: true });
 await writeFile(RELEASE_LATEST_PATH, JSON.stringify(latest, null, 2) + "\n");
 const files = {};
 for (const [name, path] of Object.entries({
-  ...assets, latest: RELEASE_LATEST_PATH,
+  ...upload, componentManifest: assets.componentManifest, latest: RELEASE_LATEST_PATH,
 })) {
   files[name] = await describeFile(path);
 }
