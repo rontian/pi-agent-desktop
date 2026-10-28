@@ -6,7 +6,8 @@ import { useTheme } from "@/hooks/useTheme";
 import { useBackground } from "@/hooks/useBackground";
 import { THEME_OPTIONS } from "@/lib/theme";
 import { BACKGROUND_OPTIONS } from "@/lib/backgrounds";
-import { isTauriDesktop, openPathNative } from "@/lib/desktop-native";
+import { isTauriDesktop, openPathNative, openPathWithNative, revealItemInDirNative } from "@/lib/desktop-native";
+import { detectUiPlatform } from "@/lib/ui-platform";
 import { ConfigButton } from "./SettingsUi";
 import { ThemeIcon } from "./ThemeIcon";
 import { FontSettings } from "./FontSettings";
@@ -26,7 +27,14 @@ export function AppearanceSettings() {
       if (!response.ok) throw new Error("Could not open stylesheet");
       const data = await response.json() as { path?: string };
       if (!data.path) throw new Error("Missing stylesheet path");
-      await openPathNative(data.path);
+      if (detectUiPlatform(navigator) === "macos") {
+        // macOS often associates .css with browsers; open the editable file in
+        // TextEdit instead, and reveal it in Finder if TextEdit is unavailable.
+        try { await openPathWithNative(data.path, "/System/Applications/TextEdit.app"); }
+        catch { await revealItemInDirNative(data.path); }
+      } else {
+        await openPathNative(data.path);
+      }
     } catch {
       setCustomCssError(true);
     } finally {
