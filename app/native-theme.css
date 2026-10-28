@@ -9199,6 +9199,22 @@ html.dark .settings-background-swatch {
   gap: 12px 24px;
   padding-block: 14px;
 }
+.settings-ui-size-option {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(180px, 280px);
+  align-items: center;
+  gap: 12px 24px;
+  padding-block: 14px;
+}
+.settings-ui-size-control { display: grid; min-width: 0; gap: 8px; }
+.settings-ui-size-value {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  font-size: var(--fs-small);
+}
+.settings-ui-size-option input[type="range"] { width: 100%; margin: 0; }
 .settings-font-control { display: grid; min-width: 0; gap: 8px; }
 .settings-font-control .app-select-trigger { width: 100%; min-width: 0; }
 .settings-font-custom { display: flex; align-items: center; gap: 8px; }
@@ -9228,7 +9244,7 @@ html.dark .settings-background-swatch {
 .settings-font-preview code { color: var(--text-muted); white-space: pre-wrap; }
 .settings-font-status { display: flex; align-items: center; flex-wrap: wrap; gap: 8px; margin-top: 8px; }
 @media (max-width: 640px) {
-  .settings-font-option { grid-template-columns: minmax(0, 1fr); gap: 10px; }
+  .settings-font-option, .settings-ui-size-option { grid-template-columns: minmax(0, 1fr); gap: 10px; }
   .settings-font-custom input { font-size: 16px; }
   .settings-background-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 16px 12px; }
   .settings-appearance .settings-theme-options { width: 100%; }
