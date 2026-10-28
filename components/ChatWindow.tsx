@@ -318,7 +318,7 @@ export function ChatWindow({ session, workspaceKind, searchTarget, onSearchTarge
     dismissModelScopeWarnings,
     handleRecallQueue,
     handleBuiltinSlashCommand,
-    handleToolPresetChange, handleChatAccessRebuilt, handleThinkingLevelChange, handleSetDefaultModel, handleSetDefaultThinkingLevel, loadSlashCommands, scrollUserMsgToTop,
+    handleToolPresetChange, handleChatAccessRebuilt, handleThinkingLevelChange, handleSetDefaultModel, handleSetDefaultThinkingLevel, loadSlashCommands, completeSlashArguments, scrollUserMsgToTop,
     loadContext, activeLeafId, scrollToBottom, scrollToMessage,
   } = useAgentSession({
     session, sessionRunning, newSessionCwd, newSessionDraftKey, onAgentEnd: wrappedOnAgentEnd, onAttentionNeeded, onSessionCreated, onSessionForked,
@@ -1203,6 +1203,7 @@ export function ChatWindow({ session, workspaceKind, searchTarget, onSearchTarge
       slashCommands={slashCommands}
       slashCommandsLoading={slashCommandsLoading}
       onLoadSlashCommands={loadSlashCommands}
+      onCompleteSlashArguments={completeSlashArguments}
       onBuiltinCommand={handleBuiltinSlashCommand}
       onAudioUnlock={unlockAudio}
       autoFocus={isNew}
