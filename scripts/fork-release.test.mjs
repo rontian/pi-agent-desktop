@@ -40,8 +40,9 @@ test("GitHub Actions release is disabled; macOS release uses local gh scripts", 
   assert.match(pkg.scripts["desktop:build:app"], /--bundles app/);
   const buildScript = await read("scripts/build-local-release.mjs");
   assert.match(buildScript, /TAURI_SIGNING_PRIVATE_KEY: keyFile/);
-  assert.match(buildScript, /TAURI_SIGNING_PRIVATE_KEY_PASSWORD: signingPassword\(\)/);
-  assert.match(buildScript, /\/dev\/tty/);
+  assert.match(buildScript, /TAURI_SIGNING_PRIVATE_KEY_PASSWORD: signingPassword/);
+  assert.match(buildScript, /verifySigningPasswordWithTauri/);
+  assert.match(buildScript, /initialPassword: process\.env\.TAURI_SIGNING_PRIVATE_KEY_PASSWORD/);
   assert.match(buildScript, /PI_AGENT_DESKTOP_UPDATER_PUBLIC_KEY: publicKey/);
 });
 
