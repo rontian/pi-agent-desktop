@@ -178,8 +178,8 @@ Local builds do not register the production updater and cannot accept official u
 
 ## Upstream Sync And Releases
 
-- [`component-updates.yml`](./.github/workflows/component-updates.yml) is **manual-only** and syncs Pi SDK / pi-web with the Fork ownership boundary gate. Desktop upstream code is integrated separately via PR using [fork-sync.zh-CN.md](./docs/fork-sync.zh-CN.md).
-- [`release.yml`](./.github/workflows/release.yml) is **manual-only** and creates signed updater artifacts on Apple Silicon macOS, Linux x64 and Windows x64. A Release is published only when every platform and the component manifest are ready.
+- [`component-updates.yml`](./.github/workflows/component-updates.yml) remains optional/manual-only and syncs Pi SDK / pi-web with the Fork ownership boundary gate. Desktop upstream code is integrated separately via PR using [fork-sync.zh-CN.md](./docs/fork-sync.zh-CN.md).
+- [`release.yml`](./.github/workflows/release.yml) is disabled. Releases are built and signed locally on Apple Silicon macOS: `npm run release:build:mac`, then `npm run release:publish:mac` uses `gh` to upload validated assets. No GitHub Actions build or publish occurs.
 - `npm run release:prepare` advances the Fork version and regenerates the component manifest. `npm run desktop:build` produces local installers without updater signing.
 
 For one-time keys, versioning, local builds, publish verification and safe recovery, use the [independent Fork release manual](./docs/fork-release.zh-CN.md). This is **not** the `npm run release` flow for upstream's npm package.

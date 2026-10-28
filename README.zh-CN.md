@@ -174,11 +174,11 @@ npm run desktop:build
 
 ## 上游同步与 Release
 
-- [`component-updates.yml`](./.github/workflows/component-updates.yml) **仅手动触发**，处理 Pi SDK 与 pi-web 组件同步；与桌面上游的合并另走分支 PR，遵循 [桌面上游同步手册](./docs/fork-sync.zh-CN.md) 和 Fork ownership 规则。
-- [`release.yml`](./.github/workflows/release.yml) **仅手动触发**，为 Apple Silicon Mac、Linux x64 与 Windows x64 构建签名 Updater 产物。仅当整个矩阵成功且组件清单上传后才发布稳定 Release。
+- [`component-updates.yml`](./.github/workflows/component-updates.yml) 仍可选手动触发，只用于 Pi SDK 与 pi-web 组件同步；与桌面上游的合并另走分支 PR，遵循 [桌面上游同步手册](./docs/fork-sync.zh-CN.md) 和 Fork ownership 规则。
+- [`release.yml`](./.github/workflows/release.yml) **仅手动触发**，已禁用。正式发行仅在本地 Apple Silicon Mac 上执行 `npm run release:build:mac` 生成签名更新资产，然后使用 `npm run release:publish:mac` 通过 gh 上传并发布稳定 Release。
 - `npm run release:prepare` 递增本 Fork 版本、更新组件清单；`npm run desktop:build` 只用于无 Updater 签名的本地构建。
 
-首次配置、密钥备份、版本、正式发布和失败恢复步骤见 [Fork 独立发行手册](./docs/fork-release.zh-CN.md)。**不要使用 `npm run release` 发布桌面应用**；那是上游 pi-web 的 npm 发布脚本。
+首次配置、密钥备份、版本、正式发布和失败恢复步骤见 [Fork 独立发行手册](./docs/fork-release.zh-CN.md)。**不要使用 GitHub Actions 或 `npm run release` 发布桌面应用**；那是上游 pi-web 的 npm 发布脚本。
 
 ## 项目结构
 
