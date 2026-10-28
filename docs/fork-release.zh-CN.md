@@ -25,7 +25,7 @@ npx tauri signer generate -w ~/.tauri/rontian-pi-agent.key
 
 生成带密码的 Tauri 密钥对，私钥路径为 ~/.tauri/rontian-pi-agent.key，公钥路径为 ~/.tauri/rontian-pi-agent.key.pub。请**单独、安全、离线备份密钥和密码**，不要存入 Git、脚本、仓库、终端命令历史或 GitHub Actions Secrets。此流程完全不需要 GitHub Actions Secrets。私钥丢失后已安装的旧版本无法验证新私钥生成的更新。
 
-正式执行 `npm run release:build:mac` 时，如果没有预先设置 `TAURI_SIGNING_PRIVATE_KEY_PASSWORD`，脚本会从交互式终端安全提示输入私钥密码（无回显）；**不需要手动 export**。如果明确需要非交互式调用，也可以自行预先设置该环境变量，但不要将密码写在命令行、脚本、`.env` 或 Git 中。
+正式执行 `npm run release:build:mac` 时，脚本**优先使用已经 export 的 `TAURI_SIGNING_PRIVATE_KEY_PASSWORD`**，并在开始耗时构建之前用 Tauri signer 对临时测试文件验证密码。如果密码正确，不再提问；如果变量不存在或密码错误，会在交互式终端中隐藏输入并重新验证（最多 3 次交互输入）。密钥文件异常或签名工具错误则直接报错，不能靠重复输入密码解决。不需要反复导出环境变量，也不要将密码写在命令行、脚本、`.env` 或 Git 中。
 
 签名密钥的路径与公钥由脚本读取，**不需要手动导出 `TAURI_SIGNING_PRIVATE_KEY` 或 `PI_AGENT_DESKTOP_UPDATER_PUBLIC_KEY`**。签名构建脚本默认从上述密钥路径读取公钥和私钥；也可通过 PI_AGENT_RELEASE_KEY_PATH 指向其他可信路径。脚本只在本地子进程环境中注入公钥与密钥路径，不修改已跟踪的 tauri.conf.json。
 
