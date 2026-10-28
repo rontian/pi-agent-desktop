@@ -44,6 +44,7 @@ test("GitHub Actions release is disabled; macOS release uses local gh scripts", 
   assert.match(buildScript, /verifySigningPasswordWithTauri/);
   assert.match(buildScript, /initialPassword: process\.env\.TAURI_SIGNING_PRIVATE_KEY_PASSWORD/);
   assert.match(buildScript, /PI_AGENT_DESKTOP_UPDATER_PUBLIC_KEY: publicKey/);
+  assert.match(buildScript, /localReleaseBuildEnvironment\(process\.env/);
 });
 
 test("local updater manifest targets the signed macOS archive on this fork", async () => {
