@@ -104,6 +104,24 @@ for (const [index, item] of planned.entries()) {
     console.log(prefix + ": ✓ 已上传，大小及 SHA256 一致，跳过");
     continue;
   }
+  if (item.staleStarterId !== null) {
+    // A failed GitHub upload may leave a zero-byte "starter" placeholder.
+    // Refresh and re-check exactly that id/state before safely deleting it.
+    release = fetchRelease(tag);
+    validateDraft(release, tag);
+    const stale = release.assets.filter((x) => x.name === item.expected.name);
+    if (stale.length !== 1 || stale[0].id !== item.staleStarterId ||
+        stale[0].state !== "starter" || stale[0].size !== 0) {
+      throw new Error(prefix + ": stale placeholder changed; refusing automatic deletion.");
+    }
+    console.log(prefix + ": 清理 GitHub 遗留的 0 字节 starter 占位资产");
+    run("gh", ["api", "--method", "DELETE", "repos/" + REPO + "/releases/assets/" + item.staleStarterId]);
+    release = fetchRelease(tag);
+    validateDraft(release, tag);
+    if (release.assets.some((x) => x.name === item.expected.name)) {
+      throw new Error(prefix + ": starter placeholder was not removed; Draft preserved.");
+    }
+  }
   console.log(prefix + ": 开始上传 " + formatSize(item.expected.size) + "；下方为 curl 实时传输百分比");
   // Token flows only through curl stdin. Never an argument, disk config or log.
   token ??= capture("gh", ["auth", "token"]);
