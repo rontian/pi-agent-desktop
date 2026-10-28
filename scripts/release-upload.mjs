@@ -31,8 +31,11 @@ export function planReleaseUploads(remoteAssets, metadata, paths) {
     const path = paths[key];
     if (!path || basename(path) !== expected.name) throw new Error("Invalid local asset for " + key + ".");
     const remote = remoteAssets.find((asset) => asset.name === expected.name);
-    if (remote) verifyUploadedAsset(remote, expected);
-    return { key, path, expected, alreadyUploaded: Boolean(remote) };
+    const staleStarter = remote?.state === "starter" && remote.size === 0 &&
+      Number.isSafeInteger(remote.id) && remote.id > 0;
+    if (remote && !staleStarter) verifyUploadedAsset(remote, expected);
+    return { key, path, expected, alreadyUploaded: Boolean(remote && !staleStarter),
+      staleStarterId: staleStarter ? remote.id : null };
   });
 }
 
