@@ -4,7 +4,7 @@ import { execFileSync, spawnSync } from "node:child_process";
 import { readFile, mkdir, rm, writeFile, copyFile } from "node:fs/promises";
 import { homedir } from "node:os";
 import { join, resolve } from "node:path";
-import { rootDir } from "./release-components.mjs";
+import { rootDir, forkReleaseTag } from "./release-components.mjs";
 import { validateUpdaterPublicKey } from "./configure-updater-public-key.mjs";
 import {
   macReleaseAssets, uploadAssetPaths, createMacUpdaterManifest, describeFile, RELEASE_LATEST_PATH, RELEASE_METADATA_PATH, RELEASE_UPLOAD_DIR,
@@ -39,7 +39,7 @@ const env = {
 };
 const assets = macReleaseAssets(version);
 const upload = uploadAssetPaths(version);
-run("npm", ["run", "release:verify"]);
+run("npm", ["run", "release:check"]);
 run("npm", ["run", "desktop:prepare"]);
 // Prevent a failed build from mistakenly reusing stale artifacts from an earlier run.
 for (const path of [assets.dmg, assets.archive, assets.signature, upload.dmg, upload.archive, upload.signature, RELEASE_LATEST_PATH, RELEASE_METADATA_PATH]) {
@@ -60,7 +60,7 @@ for (const [name, path] of Object.entries({
   files[name] = await describeFile(path);
 }
 await writeFile(RELEASE_METADATA_PATH, JSON.stringify({
-  version, commit, repository: "rontian/pi-agent-desktop", files,
+  version, tag: forkReleaseTag(version), commit, repository: "rontian/pi-agent-desktop", files,
 }, null, 2) + "\n");
 console.log("Signed macOS release is ready locally at " + RELEASE_METADATA_PATH);
 console.log("Next: npm run release:publish:mac (uploads assets using gh, after review).");

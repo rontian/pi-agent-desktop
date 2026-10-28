@@ -24,15 +24,20 @@ const next = args.includes("--next-patch")
   ? nextManualDesktopVersion(current, releasedVersions)
   : nextDesktopVersion(current, releasedVersions);
 
-desktopPackage.version = next;
-await writeFile(packagePath, `${JSON.stringify(desktopPackage, null, 2)}\n`);
+if (next !== current) {
+  desktopPackage.version = next;
+  await writeFile(packagePath, `${JSON.stringify(desktopPackage, null, 2)}\n`);
 
-const cargo = await readFile(cargoPath, "utf8");
-await writeFile(cargoPath, cargo.replace(/^(version\s*=\s*")[^"]+("\s*)$/m, `$1${next}$2`));
+  const cargo = await readFile(cargoPath, "utf8");
+  const updatedCargo = cargo.replace(/^(version\s*=\s*")[^"]+("\s*)$/m, (_match, before, after) => `${before}${next}${after}`);
+  if (cargo === updatedCargo) throw new Error("Cargo.toml desktop version was not found");
+  await writeFile(cargoPath, updatedCargo);
 
-const lock = await readFile(lockPath, "utf8");
-await writeFile(
-  lockPath,
-  lock.replace(/(name = "pi-agent-desktop"\nversion = ")[^"]+("\n)/, `$1${next}$2`),
-);
-console.log(`pi-agent-desktop ${current} -> ${next}`);
+  const lock = await readFile(lockPath, "utf8");
+  const updatedLock = lock.replace(/(name = "pi-agent-desktop"\nversion = ")[^"]+("\n)/, (_match, before, after) => `${before}${next}${after}`);
+  if (lock === updatedLock) throw new Error("Cargo.lock desktop version was not found");
+  await writeFile(lockPath, updatedLock);
+}
+console.log(next === current
+  ? `pi-agent-desktop ${current}: not yet released; keeping version`
+  : `pi-agent-desktop ${current} -> ${next}`);
