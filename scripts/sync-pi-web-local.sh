@@ -85,7 +85,16 @@ case "$command_name" in
       rm -f "$state"
       echo "已退出未提交的 Git merge。"
     else
-      die "合并已经提交，不能自动回滚；请在功能分支上审查提交并自行决定如何处理"
+      tag="$(get_state tag)"
+      if [[ "$(get_state phase)" == merge ]] &&
+         ! git merge-base --is-ancestor "$(tag_ref "$tag")" HEAD &&
+         [[ -z "$(git status --porcelain)" ]]; then
+        # A pre-merge error can leave a state file without creating MERGE_HEAD.
+        rm -f "$state"
+        echo "Git merge 尚未开始，已清理可恢复状态；工作分支保持不变。"
+      else
+        die "合并已经提交或工作区仍有改动，拒绝自动回滚；请在功能分支上人工检查"
+      fi
     fi
     ;;
   resume)
