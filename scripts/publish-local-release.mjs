@@ -6,6 +6,7 @@ import { join } from "node:path";
 import { rootDir, forkReleaseTag } from "./release-components.mjs";
 import { RELEASE_METADATA_PATH, RELEASE_LATEST_PATH, verifyBuildAssets } from "./local-release.mjs";
 import { verifyReusableBuild } from "./reuse-signed-release-build.mjs";
+import { buildReleaseUploadUrl, formatSize, planReleaseUploads, uploadAssetWithProgress, verifyUploadedAsset } from "./release-upload.mjs";
 
 const REPO = "rontian/pi-agent-desktop";
 function capture(cmd, args) {
@@ -16,6 +17,22 @@ function run(cmd, args) {
   if (result.error) throw result.error;
   if (result.status !== 0) throw new Error(cmd + " exited " + result.status);
 }
+function fetchRelease(tag) {
+  const result = spawnSync("gh", ["api", "repos/" + REPO + "/releases/tags/" + tag], {
+    cwd: rootDir, encoding: "utf8", maxBuffer: 5 * 1024 * 1024,
+  });
+  if (result.error) throw result.error;
+  if (result.status === 0) return JSON.parse(result.stdout);
+  if (/\bHTTP 404\b/.test(result.stderr ?? "")) return null;
+  throw new Error("Unable to retrieve release from GitHub: " + (result.stderr?.trim() || "exit " + result.status));
+}
+function validateDraft(release, tag) {
+  if (!release || release.tag_name !== tag || !Number.isSafeInteger(release.id) ||
+    !Array.isArray(release.assets) || !release.draft) {
+    throw new Error("Release is missing, already published, or invalid; refusing to modify it.");
+  }
+}
+
 const branch = capture("git", ["branch", "--show-current"]);
 if (branch !== "main" || capture("git", ["status", "--porcelain"])) {
   throw new Error("Publish requires a clean local main checkout.");
@@ -56,9 +73,7 @@ const version = JSON.parse(await readFile("src-tauri/pi-agent-desktop-package.js
 if (metadata.version !== version) throw new Error("Built version is no longer current. Rebuild.");
 const paths = await verifyBuildAssets(metadata);
 const tag = forkReleaseTag(version);
-const exists = spawnSync("gh", ["release", "view", tag, "--repo", REPO], { cwd: rootDir, stdio: "ignore" });
-if (exists.status === 0) throw new Error("Release " + tag + " already exists (possibly a draft). Inspect it before retrying.");
-// Tag exactly this commit; avoid creating a different release tag on the server.
+// Verify/create the exact build tag before opening or resuming the Draft.
 const localTag = spawnSync("git", ["rev-parse", "-q", "--verify", "refs/tags/" + tag], { cwd: rootDir, encoding: "utf8" });
 if (localTag.status === 0) {
   if (capture("git", ["rev-list", "-n", "1", tag]) !== metadata.commit) throw new Error("Existing tag points to another commit.");
@@ -70,16 +85,64 @@ if (!remoteTag) run("git", ["push", "origin", "refs/tags/" + tag]);
 else if (capture("git", ["ls-remote", "--tags", "origin", "refs/tags/" + tag + "^{}"]).split(/\s+/)[0] !== metadata.commit) {
   throw new Error("Remote release tag does not point to this commit.");
 }
-const upload = [paths.dmg, paths.archive, paths.signature, paths.componentManifest, paths.latest];
-run("gh", ["release", "create", tag, ...upload, "--repo", REPO, "--verify-tag",
-  "--title", "Pi Agent Desktop " + tag, "--generate-notes", "--draft"]);
-const uploaded = JSON.parse(capture("gh", ["release", "view", tag, "--repo", REPO, "--json", "assets"])).assets || [];
-for (const file of upload) {
-  const expected = metadata.files[file === RELEASE_LATEST_PATH ? "latest" :
-    Object.entries(paths).find(([, value]) => value === file)?.[0]];
-  if (!uploaded.some((asset) => asset.name === expected.name && asset.size === expected.size)) {
-    throw new Error("Missing or mismatched uploaded asset " + expected.name + "; release left as draft.");
-  }
+let release = fetchRelease(tag);
+if (release === null) {
+  console.log("Creating Draft Release " + tag + "...");
+  run("gh", ["release", "create", tag, "--repo", REPO, "--verify-tag",
+    "--title", "Pi Agent Desktop " + tag, "--generate-notes", "--draft"]);
+  release = fetchRelease(tag);
+} else {
+  console.log("Resuming existing Draft Release " + tag + "; checking every asset SHA256.");
 }
+validateDraft(release, tag);
+const planned = planReleaseUploads(release.assets, metadata, paths);
+console.log("Draft " + tag + ": " + planned.filter((x) => x.alreadyUploaded).length + "/" + planned.length + " assets verified.");
+let token;
+for (const [index, item] of planned.entries()) {
+  const prefix = "[" + (index + 1) + "/" + planned.length + "] " + item.expected.name;
+  if (item.alreadyUploaded) {
+    console.log(prefix + ": ✓ 已上传，大小及 SHA256 一致，跳过");
+    continue;
+  }
+  if (item.staleStarterId !== null) {
+    // A failed GitHub upload may leave a zero-byte "starter" placeholder.
+    // Refresh and re-check exactly that id/state before safely deleting it.
+    release = fetchRelease(tag);
+    validateDraft(release, tag);
+    const stale = release.assets.filter((x) => x.name === item.expected.name);
+    if (stale.length !== 1 || stale[0].id !== item.staleStarterId ||
+        stale[0].state !== "starter" || stale[0].size !== 0) {
+      throw new Error(prefix + ": stale placeholder changed; refusing automatic deletion.");
+    }
+    console.log(prefix + ": 清理 GitHub 遗留的 0 字节 starter 占位资产");
+    run("gh", ["api", "--method", "DELETE", "repos/" + REPO + "/releases/assets/" + item.staleStarterId]);
+    release = fetchRelease(tag);
+    validateDraft(release, tag);
+    if (release.assets.some((x) => x.name === item.expected.name)) {
+      throw new Error(prefix + ": starter placeholder was not removed; Draft preserved.");
+    }
+  }
+  console.log(prefix + ": 开始上传 " + formatSize(item.expected.size) + "；下方为 curl 实时传输百分比");
+  // Token flows only through curl stdin. Never an argument, disk config or log.
+  token ??= capture("gh", ["auth", "token"]);
+  const uploadUrl = buildReleaseUploadUrl(release.upload_url, REPO, release.id, item.expected.name);
+  const started = Date.now();
+  const uploaded = await uploadAssetWithProgress({ uploadUrl, path: item.path, token });
+  verifyUploadedAsset(uploaded, item.expected);
+  release = fetchRelease(tag);
+  validateDraft(release, tag);
+  const remote = release.assets.filter((asset) => asset.name === item.expected.name);
+  if (remote.length !== 1) throw new Error("GitHub did not retain exactly one " + item.expected.name + "; Draft preserved.");
+  verifyUploadedAsset(remote[0], item.expected);
+  const seconds = Math.max((Date.now() - started) / 1000, 0.001);
+  console.log(prefix + ": ✓ 完成，SHA256 已校验，平均 " +
+    (item.expected.size / 1048576 / seconds).toFixed(2) + " MiB/s");
+}
+release = fetchRelease(tag);
+validateDraft(release, tag);
+if (planReleaseUploads(release.assets, metadata, paths).some((x) => !x.alreadyUploaded)) {
+  throw new Error("Not all release assets are uploaded; leaving Draft unpublished.");
+}
+console.log("All " + planned.length + " assets verified; publishing " + tag + "...");
 run("gh", ["release", "edit", tag, "--repo", REPO, "--draft=false", "--prerelease=false", "--latest"]);
 console.log("Published " + tag + " to https://github.com/" + REPO + "/releases/tag/" + tag);
