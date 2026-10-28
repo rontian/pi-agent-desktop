@@ -46,10 +46,11 @@ test("a manually requested direct sync is gated on the fork boundary", () => {
   assert.doesNotMatch(componentUpdates, /gh workflow run release\.yml/);
 });
 
-test("the signed release workflow is manual-only", async () => {
+test("legacy release workflow has no active release job", async () => {
   const release = await readText(join(root, ".github", "workflows", "release.yml"), "utf8");
   assert.match(release, /on:\s*\n\s*workflow_dispatch:/);
   assert.doesNotMatch(release, /\bpush:/);
+  assert.match(release, /build:\s*\n\s*if: false/);
 });
 
 test("the merge gate covers tests, types, lint and a real build", () => {
