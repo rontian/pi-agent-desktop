@@ -2,8 +2,10 @@
 // Publish the exact previously-built assets, not a silent rebuild. gh handles all asset uploads.
 import { execFileSync, spawnSync } from "node:child_process";
 import { readFile } from "node:fs/promises";
+import { join } from "node:path";
 import { rootDir, forkReleaseTag } from "./release-components.mjs";
 import { RELEASE_METADATA_PATH, RELEASE_LATEST_PATH, verifyBuildAssets } from "./local-release.mjs";
+import { verifyReusableBuild } from "./reuse-signed-release-build.mjs";
 
 const REPO = "rontian/pi-agent-desktop";
 function capture(cmd, args) {
@@ -27,8 +29,28 @@ if (!/^(?:https:\/\/github\.com\/|git@github\.com:)rontian\/pi-agent-desktop(?:\
 }
 run("gh", ["auth", "status"]);
 const metadata = JSON.parse(await readFile(RELEASE_METADATA_PATH, "utf8"));
-if (metadata.commit !== head || metadata.repository !== REPO) {
-  throw new Error("Build metadata does not match this checkout. Re-run release:build:mac.");
+if (metadata.repository !== REPO) {
+  throw new Error("Build metadata does not match this repository. Re-run release:build:mac.");
+}
+if (metadata.commit !== head) {
+  const ancestor = spawnSync("git", ["merge-base", "--is-ancestor", metadata.commit, head], {
+    cwd: rootDir, stdio: "ignore",
+  });
+  if (ancestor.error) throw ancestor.error;
+  const changedPaths = capture("git", ["diff", "--name-only", "--no-renames", metadata.commit, head])
+    .split(/\r?\n/).filter(Boolean);
+  const previousLocalRelease = capture("git", ["show", metadata.commit + ":scripts/local-release.mjs"]);
+  const currentLocalRelease = await readFile(join(rootDir, "scripts", "local-release.mjs"), "utf8");
+  verifyReusableBuild({
+    buildCommit: metadata.commit,
+    currentCommit: head,
+    isAncestor: ancestor.status === 0,
+    changedPaths,
+    previousLocalRelease,
+    currentLocalRelease,
+  });
+  console.log("Reusing signed build from " + metadata.commit
+    + "; main changed only release verification tooling. The release tag will point to the actual build commit.");
 }
 const version = JSON.parse(await readFile("src-tauri/pi-agent-desktop-package.json", "utf8")).version;
 if (metadata.version !== version) throw new Error("Built version is no longer current. Rebuild.");
@@ -39,13 +61,13 @@ if (exists.status === 0) throw new Error("Release " + tag + " already exists (po
 // Tag exactly this commit; avoid creating a different release tag on the server.
 const localTag = spawnSync("git", ["rev-parse", "-q", "--verify", "refs/tags/" + tag], { cwd: rootDir, encoding: "utf8" });
 if (localTag.status === 0) {
-  if (capture("git", ["rev-list", "-n", "1", tag]) !== head) throw new Error("Existing tag points to another commit.");
+  if (capture("git", ["rev-list", "-n", "1", tag]) !== metadata.commit) throw new Error("Existing tag points to another commit.");
 } else {
-  run("git", ["tag", "-a", tag, "-m", tag]);
+  run("git", ["tag", "-a", tag, "-m", tag, metadata.commit]);
 }
 const remoteTag = capture("git", ["ls-remote", "--tags", "origin", "refs/tags/" + tag]);
 if (!remoteTag) run("git", ["push", "origin", "refs/tags/" + tag]);
-else if (capture("git", ["ls-remote", "--tags", "origin", "refs/tags/" + tag + "^{}"]).split(/\s+/)[0] !== head) {
+else if (capture("git", ["ls-remote", "--tags", "origin", "refs/tags/" + tag + "^{}"]).split(/\s+/)[0] !== metadata.commit) {
   throw new Error("Remote release tag does not point to this commit.");
 }
 const upload = [paths.dmg, paths.archive, paths.signature, paths.componentManifest, paths.latest];
