@@ -1371,7 +1371,7 @@ export const ChatInput = forwardRef<ChatInputHandle, Props>(function ChatInput({
     clearInput();
   }, [value, attachedImages, workspaceUnavailable, isStreaming, runBuiltinCommand, onSend, clearInput, onAudioUnlock, sessionMentionTargetsRef]);
 
-  const argumentContext = !compact && !atQuery && !hashQuery
+  const argumentContext = !compact && !atQuery
     ? parseSlashArgumentContext(value, argumentCursor ?? value.length)
     : null;
   const argumentCommandName = argumentContext?.name ?? null;
@@ -2690,7 +2690,7 @@ export const ChatInput = forwardRef<ChatInputHandle, Props>(function ChatInput({
               ))}
             </div>
           )}
-          {hashMenuOpen && hashQuery !== null && (
+          {hashMenuOpen && hashQuery !== null && !argumentMenuOpen && (
             <SessionMentionMenu
               loaded={sessionIndex !== null}
               matches={hashMatches}
