@@ -61,11 +61,11 @@ export async function describeFile(path) {
   };
 }
 
-export async function verifyBuildAssets(metadata) {
+export async function verifyBuildAssets(metadata, { selectedPaths } = {}) {
   if (!metadata || typeof metadata !== "object") throw new Error("Invalid release-build.json");
   if (metadata.tag !== forkReleaseTag(metadata.version)) throw new Error("Release tag does not match Fork version");
   const paths = uploadAssetPaths(metadata.version);
-  const selected = {
+  const selected = selectedPaths ?? {
     dmg: paths.dmg,
     archive: paths.archive,
     signature: paths.signature,
@@ -78,14 +78,14 @@ export async function verifyBuildAssets(metadata) {
     if (!expected || expected.sha256 !== actual.sha256 || expected.size !== actual.size
       || expected.name !== actual.name) throw new Error("Release asset changed since build: " + path);
   }
-  const manifest = JSON.parse(await readFile(RELEASE_LATEST_PATH, "utf8"));
-  const signature = (await readFile(paths.signature, "utf8")).trim();
+  const manifest = JSON.parse(await readFile(selected.latest, "utf8"));
+  const signature = (await readFile(selected.signature, "utf8")).trim();
   if (manifest.version !== metadata.version
     || manifest.platforms?.["darwin-aarch64"]?.signature !== signature
-    || manifest.platforms?.["darwin-aarch64"]?.url !== githubAssetUrl(metadata.version, paths.archive)) {
+    || manifest.platforms?.["darwin-aarch64"]?.url !== githubAssetUrl(metadata.version, selected.archive)) {
     throw new Error("latest.json does not match the signed macOS updater artifact");
   }
-  const components = JSON.parse(await readFile(paths.componentManifest, "utf8"));
+  const components = JSON.parse(await readFile(selected.componentManifest, "utf8"));
   if (components.appVersion !== metadata.version
     || components.components?.find((x) => x.id === "pi-agent-desktop")?.repository !== RELEASE_REPO) {
     throw new Error("Component manifest does not match the fork release");
