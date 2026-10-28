@@ -1,4 +1,4 @@
-name: Publish signed desktop release
+name: LEGACY DISABLED - local gh release only
 
 on:
   workflow_dispatch:
@@ -16,7 +16,9 @@ concurrency:
   cancel-in-progress: false
 
 jobs:
+  # Publishing has moved to scripts/build-local-release.mjs and scripts/publish-local-release.mjs.
   build:
+    if: false
     strategy:
       fail-fast: false
       max-parallel: 1
