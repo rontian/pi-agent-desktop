@@ -46,8 +46,8 @@ test("local updater manifest targets the signed macOS archive on this fork", asy
   assert.deepEqual(Object.keys(data.platforms), ["darwin-aarch64"]);
   assert.equal(data.platforms["darwin-aarch64"].signature, "signature-example");
   assert.equal(data.platforms["darwin-aarch64"].url,
-    "https://github.com/rontian/pi-agent-desktop/releases/download/v0.7.8/Pi%20Agent.app.tar.gz");
-  assert.equal(githubAssetUrl("0.7.8", "Pi Agent.app.tar.gz"),
+    "https://github.com/rontian/pi-agent-desktop/releases/download/v0.7.8/Pi.Agent.app.tar.gz");
+  assert.equal(githubAssetUrl("0.7.8", "Pi.Agent.app.tar.gz"),
     data.platforms["darwin-aarch64"].url);
   assert.throws(() => createMacUpdaterManifest("0.7.8", ""), /signature/i);
 });
