@@ -15,6 +15,7 @@ import { isBlockingExtensionUiRequest } from "@/lib/browser-notifications";
 import { normalizeToolCalls } from "@/lib/normalize";
 import { attachmentAwareTitle } from "@/lib/chat-attachments";
 import { isPromptRejectedError, sendAgentCommand } from "@/lib/agent-client";
+import type { SlashArgumentCompletionItem } from "@/lib/slash-argument-completion";
 import { mergeComposerQueueSnapshot, type ComposerQueueActionResult, type PendingComposerMessage } from "@/lib/composer-queue-types";
 import { fetchWithRetry } from "@/lib/fetch-timeout";
 import type { ModelScopeWarning } from "@/lib/model-scope-warnings";
@@ -1129,6 +1130,18 @@ export function useAgentSession(opts: UseAgentSessionOptions) {
   }, [ensureNewSession, replaceSlashCommands]);
 
   const loadSlashCommands = useCallback(async () => (await requestSlashCommands()) ?? [], [requestSlashCommands]);
+
+  /** The current extension owns its argument grammar; the Desktop only asks for candidates. */
+  const completeSlashArguments = useCallback(async (
+    name: string, prefix: string,
+  ): Promise<SlashArgumentCompletionItem[]> => {
+    const sid = sessionIdRef.current ?? await ensureNewSession();
+    if (!sid) return [];
+    const response = await sendAgentCommand<{ items?: SlashArgumentCompletionItem[] }>(
+      sid, { type: "get_command_completions", name, prefix },
+    );
+    return response?.items ?? [];
+  }, [ensureNewSession]);
 
   // The list a bare /mcp is decided by: the request under way (the palette starts
   // one as "/mcp" is typed, often still unanswered at Enter), else the list already
@@ -3058,7 +3071,7 @@ export function useAgentSession(opts: UseAgentSessionOptions) {
     // Present only while a history edit is pending.
     cancelEdit: editEntryId ? cancelEdit : undefined,
     setNoticePaused: setPausedNoticeId,
-    handleToolPresetChange, handleChatAccessRebuilt, handleThinkingLevelChange, handleSetDefaultModel, handleSetDefaultThinkingLevel, loadTools, loadSlashCommands, setActiveLeafId, setData, setMessages, loadContext,
+    handleToolPresetChange, handleChatAccessRebuilt, handleThinkingLevelChange, handleSetDefaultModel, handleSetDefaultThinkingLevel, loadTools, loadSlashCommands, completeSlashArguments, setActiveLeafId, setData, setMessages, loadContext,
     scrollToBottom, scrollUserMsgToTop, scrollToMessage,
     dispatch, setAgentRunning, setForkingEntryId,
     bashRunning, pendingBash, summarizationRetry, automation, handleSetAutomation,
