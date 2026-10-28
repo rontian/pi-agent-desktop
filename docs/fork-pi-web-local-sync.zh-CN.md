@@ -6,18 +6,20 @@ Fork 使用 `git merge` 同步 `agegr/pi-web` 的 Release tag，而非 submodule
 
 ## 初次使用
 
-在 macOS 上使用当前已有的 Node 22、npm、Git 和 mise 环境：
+在 macOS 上使用当前已有的 Node 22、npm、Git 和 mise 环境。**本轮脚本暂时只在
+`codex/sync-pi-web-v0.12.2` 功能分支中，还没有合入 main**，首次测试需要先拉取该分支：
 
 ```bash
 cd /Volumes/MY_Spaces/rontian/pi-agent-desktop
-git fetch origin main
-git switch main
-git pull --ff-only origin main
-# 保证工作区干净，脚本会从 main 新建 codex/sync-pi-web-v0.12.2 分支
+git fetch origin codex/sync-pi-web-v0.12.2
+git switch -c codex/sync-pi-web-v0.12.2 --track origin/codex/sync-pi-web-v0.12.2
+# 如果本地已经有该分支，改为 git switch 后 git pull --ff-only
 bash scripts/sync-pi-web-local.sh start v0.12.2
 ```
 
-也可以在已经建立的干净功能分支上直接执行 `start`；脚本不会从功能分支再次新建分支。
+等脚本经 PR 合入 `main` 后，以后可在干净的 `main` 上运行 `start v0.12.3` 等新 tag，
+脚本会自动建立功能分支。也可以在现有干净功能分支上执行 `start`，
+此时不会二次创建分支。
 版本参数必须是明确的已发布 tag，避免不受控地追踪上游 main。
 
 脚本从 `https://github.com/agegr/pi-web.git` 拉取指定 tag，
