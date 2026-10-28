@@ -2649,6 +2649,45 @@ export const ChatInput = forwardRef<ChatInputHandle, Props>(function ChatInput({
               </div>
             </div>
           )}
+          {argumentMenuOpen && argumentContext && (
+            <div
+              className="native-popover app-menu app-suggestion-menu"
+              role="listbox"
+              aria-label={`/${argumentContext.name} arguments`}
+              style={{
+                position: "absolute", left: 0, right: 0, bottom: "calc(100% + 8px)",
+                zIndex: 120, background: "var(--bg)", border: "var(--hairline) solid var(--border)",
+                borderRadius: 8, boxShadow: "0 -6px 20px rgba(0,0,0,0.12)",
+                maxHeight: "min(56vh, 460px)", overflowY: "auto", padding: 10,
+              }}
+            >
+              <div style={{ fontSize: 11, color: "var(--text-dim)", paddingBottom: 8 }}>
+                /${argumentContext.name} · {argumentItems.length} · Tab / Enter
+              </div>
+              {argumentItems.map((item, index) => (
+                <button
+                  type="button"
+                  role="option"
+                  aria-selected={index === argumentActiveIndex}
+                  key={`${index}:${item.value}`}
+                  onMouseDown={(e) => { e.preventDefault(); applyArgumentCompletion(item); }}
+                  onMouseEnter={() => setArgumentActiveIndex(index)}
+                  style={{
+                    display: "block", width: "100%", textAlign: "left", padding: "8px 10px",
+                    border: `1px solid ${index === argumentActiveIndex ? "var(--accent)" : "var(--border)"}`,
+                    borderRadius: 7, marginBottom: 5, cursor: "pointer",
+                    background: index === argumentActiveIndex ? "var(--bg-selected)" : "var(--bg-panel)",
+                    color: "var(--text)",
+                  }}
+                >
+                  <div style={{ fontSize: 13, fontFamily: "var(--font-mono)", overflowWrap: "anywhere" }}>{item.label}</div>
+                  {item.description && (
+                    <div style={{ fontSize: 11, color: "var(--text-dim)", marginTop: 4, overflowWrap: "anywhere" }}>{item.description}</div>
+                  )}
+                </button>
+              ))}
+            </div>
+          )}
           {hashMenuOpen && hashQuery !== null && (
             <SessionMentionMenu
               loaded={sessionIndex !== null}
