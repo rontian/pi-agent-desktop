@@ -3,9 +3,15 @@ import { isFontPreferences, type FontPreferences } from "./font-preferences";
 
 export function readFontPreferences(path = getPiWebSettingsPath()): FontPreferences | null {
   const fonts = readStored(path).fonts;
-  return isFontPreferences(fonts) ? { ui: fonts.ui, mono: fonts.mono } : null;
+  return isFontPreferences(fonts) ? {
+    ui: fonts.ui, mono: fonts.mono,
+    ...(fonts.uiSize === undefined ? {} : { uiSize: fonts.uiSize }),
+  } : null;
 }
 
 export function writeFontPreferences(fonts: FontPreferences, path = getPiWebSettingsPath()): void {
-  updatePiWebSettings({ fonts: { ui: fonts.ui, mono: fonts.mono } }, path);
+  updatePiWebSettings({ fonts: {
+    ui: fonts.ui, mono: fonts.mono,
+    ...(fonts.uiSize === undefined ? {} : { uiSize: fonts.uiSize }),
+  } }, path);
 }
