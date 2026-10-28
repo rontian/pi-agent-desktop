@@ -2,11 +2,13 @@
    secondary lines, small = controls and dense rows, body = list rows and prose,
    title = dialog and panel headings. Add a tier before adding a size. */
 :root {
-  --fs-micro: 10px;
-  --fs-caption: 11px;
-  --fs-small: 12px;
-  --fs-body: 13px;
-  --fs-title: 15px;
+  /* One adjustable base size, with the existing five-tier hierarchy intact. */
+  --ui-font-offset: 0px;
+  --fs-micro: calc(10px + var(--ui-font-offset));
+  --fs-caption: calc(11px + var(--ui-font-offset));
+  --fs-small: calc(12px + var(--ui-font-offset));
+  --fs-body: calc(13px + var(--ui-font-offset));
+  --fs-title: calc(15px + var(--ui-font-offset));
   /* Hairlines: one device pixel on retina, where a CSS pixel is two. */
   --hairline: 1px;
 }
@@ -627,6 +629,15 @@
 /* While the session is busy, in-session edit branches must wait. Keep the
    action visible and disabled (MessageView supplies the reason) so users do
    not lose the affordance; fork stays available during ordinary agent runs. */
+/* Conversation text keeps its own chat-font-size control: do not inherit UI scaling. */
+.chat-scroll-container {
+  --fs-micro: 10px;
+  --fs-caption: 11px;
+  --fs-small: 12px;
+  --fs-body: 13px;
+  --fs-title: 15px;
+}
+
 .chat-window[data-session-busy="true"] .user-msg-actions button:disabled {
   opacity: 0.48;
 }
