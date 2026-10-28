@@ -631,6 +631,7 @@
    not lose the affordance; fork stays available during ordinary agent runs. */
 /* Conversation text keeps its own chat-font-size control: do not inherit UI scaling. */
 .chat-scroll-container {
+  font-size: 13px;
   --fs-micro: 10px;
   --fs-caption: 11px;
   --fs-small: 12px;
