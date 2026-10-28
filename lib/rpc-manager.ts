@@ -1309,7 +1309,7 @@ export class AgentSessionWrapper {
       case "get_command_completions": {
         const name = command.name;
         const prefix = command.prefix;
-        if (typeof name !== "string" || !name || name.length > 128 || /\\s/.test(name)
+        if (typeof name !== "string" || !name || name.length > 128 || /\s/.test(name)
           || typeof prefix !== "string" || prefix.length > 4096) return { items: [] };
         const registered = this.inner.extensionRunner.getRegisteredCommands()
           .find((item) => item.invocationName === name);
