@@ -9,7 +9,7 @@
 ## 两种签名
 
 1. **Tauri Updater 密钥**：用于签名更新归档及在已安装 App 中验证。与 Apple 证书无关；必须在每个发行版本中使用相同的私钥。无有效 Tauri Updater 私钥就无法通过 App 内更新。
-2. **macOS 签名 / 公证**：当前本地发布脚本默认设置 APPLE_SIGNING_IDENTITY=-（ad-hoc），用于个人受控环境。面向外部用户分发时，应设置 Apple Developer ID 并按 Tauri/Apple 官方说明完成 notarization。Updater 的签名不能替代公证。
+2. **macOS 签名 / 公证**：本 Fork 目前只用于个人 Mac 安装测试，`release:build:mac` 默认**不提交 Apple 公证**，即使终端已导出 `APPLE_ID`、`APPLE_PASSWORD`、`APPLE_TEAM_ID` 等公证凭证也会在 Tauri 构建子进程中自动剔除。若 `APPLE_SIGNING_IDENTITY` 已配置有效的 Developer ID Application 证书则仍用它签名；否则使用 ad-hoc `-`。Tauri Updater 密钥签名继续保留。未经公证的 DMG 下载后可能需要在 macOS「隐私与安全性」手动允许打开。未来若公开分发，必须另外审查内嵌 Node/native 组件签名和公证流程；Updater 签名不能替代苹果公证。
 
 保留现有 Pi Agent.app 和 bundle identifier com.abcwyc.pi-agent，避免改变既有系统数据目录；因此此 Fork 与同名上游 App 不能保证并存。正式升级前备份必要设置与会话文件，后者通常位于 ~/.pi/agent。
 
@@ -75,7 +75,7 @@ git fetch origin
 git switch main
 git pull --ff-only origin main
 git status --short
-# 密码变量需要事先使用 read -rs 设置好
+# Updater 密码可使用已导出的变量，缺失时脚本交互输入；苹果公证凭证无需取消导出
 npm run release:build:mac
 ```
 
@@ -83,10 +83,13 @@ npm run release:build:mac
 - 强制当前为干净的 main / Apple Silicon Mac，检查密钥、公钥格式和密码；
 - 运行完整 `npm run release:check`，再准备 Next.js standalone；
 - 使用本地 Tauri 构建完整 App/DMG、签名的 `Pi Agent.app.tar.gz` 和 `.sig`；
+- Tauri 构建子进程强制移除 Apple 公证凭证（不修改终端原始环境变量），所以不需要每次使用 `env -u`；即使你在别的项目配置了公证密码，本次也只会得到 `skipping app notarization` 警告，不会因为提交公证而失败；
 - 通过临时命令行配置注入 Fork Updater 公钥，不写入受 Git 管理的 Tauri 配置；
 - 生成 `src-tauri/target/release/bundle/local-release/latest.json`（仅 `darwin-aarch64`）及 `release-build.json`（版本、提交 SHA 和资产 SHA256）。
 
 **若 DMG 制作失败，正式流程停止，不能上传旧的或不完整的资产。** 不要把只有本地无签名更新的 DMG 当成正式 Release。
+
+**首次本机安装测试**：这个 Release 仍保留 Developer ID（若配置）和独立 Tauri Updater 签名，但不申请 Apple 公证票据，不能宣称获得 Gatekeeper 免提示放行。此前公证失败的构建不会生成完整的 `release-build.json`；必须从干净 `main` 重新打包后才可发布。
 
 审核打包产物后：
 
