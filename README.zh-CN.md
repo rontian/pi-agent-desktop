@@ -174,7 +174,7 @@ npm run desktop:build
 
 ## 上游同步与 Release
 
-- [`component-updates.yml`](./.github/workflows/component-updates.yml) 仍可选手动触发，只用于 Pi SDK 与 pi-web 组件同步；与桌面上游的合并另走分支 PR，遵循 [桌面上游同步手册](./docs/fork-sync.zh-CN.md) 和 Fork ownership 规则。
+- [`component-updates.yml`](./.github/workflows/component-updates.yml) 目前仅可手动触发。维护者也可使用 [本地 pi-web 同步与冲突恢复脚本](./docs/fork-pi-web-local-sync.zh-CN.md)（`bash scripts/sync-pi-web-local.sh start v0.12.2`），遇冲突暂停、修复后 `resume`；与桌面上游的同步另遵循 [桌面上游同步手册](./docs/fork-sync.zh-CN.md)。
 - [`release.yml`](./.github/workflows/release.yml) **仅手动触发**，已禁用。正式发行仅在本地 Apple Silicon Mac 上执行 `npm run release:build:mac` 生成签名更新资产，然后使用 `npm run release:publish:mac` 通过 gh 上传并发布稳定 Release。
 - `npm run release:prepare` 保留尚未发布的版本号，已发布才自动递增，并更新组件清单；`npm run release:check` 自动运行全部检查。发行 tag 是 `rontian-v<版本>`，不覆盖上游 `v<版本>`；`npm run desktop:build` 只用于无 Updater 签名的本地构建。
 
@@ -193,7 +193,7 @@ src-tauri/
   capabilities/         Tauri 权限配置
   resources/            桌面资源与组件版本清单
   src/                   桌面窗口、本地服务和 updater 注册
-.github/workflows/      每日组件同步与桌面 Release 自动化
+.github/workflows/      可手动触发的组件同步及现有桌面工作流
 instrumentation.ts     Next.js 服务端 HTTP 代理初始化
 ```
 
