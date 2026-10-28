@@ -882,7 +882,7 @@ export const ChatInput = forwardRef<ChatInputHandle, Props>(function ChatInput({
   const bashExcluded = bashMode && trimmedValue.startsWith("!!");
   const [slashMenuOpen, setSlashMenuOpen] = useState(false);
   const [argumentCursor, setArgumentCursor] = useState<number | null>(null);
-  const [argumentCandidates, setArgumentCandidates] = useState<{ key: string; items: SlashArgumentCompletionItem[] } | null>(null);
+  const [argumentCandidates, setArgumentCandidates] = useState<{ key: string; items: SlashArgumentCompletionItem[]; loading: boolean } | null>(null);
   const [argumentActiveIndex, setArgumentActiveIndex] = useState(0);
   const [argumentDismissedKey, setArgumentDismissedKey] = useState<string | null>(null);
   // New sessions can reuse a composer; previous cursor positions must not leak.
@@ -1381,6 +1381,11 @@ export const ChatInput = forwardRef<ChatInputHandle, Props>(function ChatInput({
     ? argumentCandidates.items : [];
   const argumentMenuOpen = Boolean(argumentContext && argumentItems.length > 0
     && argumentDismissedKey !== argumentQueryKey && !slashMenuOpen && !historyMenuOpen);
+  // While an extension is deciding what a # prefix means, do not let the
+  // Desktop's independent #session menu steal that same input.
+  const argumentClaimsHash = Boolean(argumentContext && argumentQueryKey !== null
+    && (argumentCandidates?.key !== argumentQueryKey || argumentCandidates.loading
+      || argumentItems.length > 0 || argumentDismissedKey === argumentQueryKey));
   const slashQuery = !compact && value.startsWith("/") && !/\s/.test(value.slice(1))
     ? value.slice(1).toLowerCase()
     : null;
@@ -1825,7 +1830,7 @@ export const ChatInput = forwardRef<ChatInputHandle, Props>(function ChatInput({
 
       // @ file menu — skip while composing so IME candidate navigation
       // (arrows/Enter/Tab) is never intercepted.
-      if (hashMenuOpen && hashQuery !== null && !isComposing) {
+      if (hashMenuOpen && hashQuery !== null && !argumentClaimsHash && !isComposing) {
         if (e.key === "ArrowDown") {
           e.preventDefault();
           setHashActiveIndex((i) => Math.min(Math.max(0, hashMatches.length - 1), i + 1));
@@ -1897,7 +1902,7 @@ export const ChatInput = forwardRef<ChatInputHandle, Props>(function ChatInput({
         }
       }
     },
-    [isMobile, enterSendMode, isStreaming, onSteer, onFollowUp, onAbort, slashMenuOpen, slashQuery, displayedSlashCommands, slashActiveIndex, applySlashCommand, argumentMenuOpen, argumentQueryKey, argumentItems, argumentActiveIndex, applyArgumentCompletion, sendQueued, handleSend, getNextSlashIndex, hashMenuOpen, hashQuery, hashMatches, hashActiveIndex, applyHashCompletion, atMenuOpen, atQuery, atMatches, atActiveIndex, applyAtCompletion, historyMenuOpen, inputHistory, historyActiveIndex, applyHistoryInput, value, setHashActiveIndex, setHashMenuOpen]
+    [isMobile, enterSendMode, isStreaming, onSteer, onFollowUp, onAbort, slashMenuOpen, slashQuery, displayedSlashCommands, slashActiveIndex, applySlashCommand, argumentMenuOpen, argumentQueryKey, argumentItems, argumentActiveIndex, applyArgumentCompletion, sendQueued, handleSend, getNextSlashIndex, hashMenuOpen, hashQuery, argumentClaimsHash, hashMatches, hashActiveIndex, applyHashCompletion, atMenuOpen, atQuery, atMatches, atActiveIndex, applyAtCompletion, historyMenuOpen, inputHistory, historyActiveIndex, applyHistoryInput, value, setHashActiveIndex, setHashMenuOpen]
   );
 
   const handleInput = useCallback(() => {
@@ -1971,15 +1976,15 @@ export const ChatInput = forwardRef<ChatInputHandle, Props>(function ChatInput({
     if (argumentCommandName === null || argumentPrefix === null
       || argumentQueryKey === null || !onCompleteSlashArguments) return;
     let cancelled = false;
-    setArgumentCandidates({ key: argumentQueryKey, items: [] });
+    setArgumentCandidates({ key: argumentQueryKey, items: [], loading: true });
     setArgumentActiveIndex(0);
     const timer = setTimeout(() => {
       void onCompleteSlashArguments(argumentCommandName, argumentPrefix)
         .then((items) => {
-          if (!cancelled) setArgumentCandidates({ key: argumentQueryKey, items });
+          if (!cancelled) setArgumentCandidates({ key: argumentQueryKey, items, loading: false });
         })
         .catch(() => {
-          if (!cancelled) setArgumentCandidates({ key: argumentQueryKey, items: [] });
+          if (!cancelled) setArgumentCandidates({ key: argumentQueryKey, items: [], loading: false });
         });
     }, 140);
     return () => { cancelled = true; clearTimeout(timer); };
@@ -2690,7 +2695,7 @@ export const ChatInput = forwardRef<ChatInputHandle, Props>(function ChatInput({
               ))}
             </div>
           )}
-          {hashMenuOpen && hashQuery !== null && !argumentMenuOpen && (
+          {hashMenuOpen && hashQuery !== null && !argumentClaimsHash && (
             <SessionMentionMenu
               loaded={sessionIndex !== null}
               matches={hashMatches}
