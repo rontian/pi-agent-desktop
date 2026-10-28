@@ -9,7 +9,7 @@
 ## 两种签名
 
 1. **Tauri Updater 密钥**：用于签名更新归档及在已安装 App 中验证。与 Apple 证书无关；必须在每个发行版本中使用相同的私钥。无有效 Tauri Updater 私钥就无法通过 App 内更新。
-2. **macOS 签名 / 公证**：当前本地发布脚本默认设置 APPLE_SIGNING_IDENTITY=-（ad-hoc），用于个人受控环境。面向外部用户分发时，应设置 Apple Developer ID 并按 Tauri/Apple 官方说明完成 notarization。Updater 的签名不能替代公证。
+2. **macOS 签名 / 公证**：正式 `release:build:mac` 现在强制使用已有 Developer ID Application 证书和苹果公证凭证；内嵌 Node、node-pty、sharp/libvips 等 Mach-O 文件会先逐项以 hardened runtime 和安全时间戳签名，然后 Tauri 签外层 App。构建后必须通过 `codesign`、`stapler validate` 和 `spctl`；否则不生成可发布的元数据。个人 ad-hoc 测试请使用 `npm run desktop:build`，不得将其视为正式 Release。Updater 的签名不能替代苹果公证。
 
 保留现有 Pi Agent.app 和 bundle identifier com.abcwyc.pi-agent，避免改变既有系统数据目录；因此此 Fork 与同名上游 App 不能保证并存。正式升级前备份必要设置与会话文件，后者通常位于 ~/.pi/agent。
 
@@ -75,18 +75,21 @@ git fetch origin
 git switch main
 git pull --ff-only origin main
 git status --short
-# 密码变量需要事先使用 read -rs 设置好
+# 保证 APPLE_SIGNING_IDENTITY 与 Apple ID + App 专用密码 + Team ID（或 API key）已导出
+# Tauri Updater 密钥密码允许提前 export，也可由脚本交互输入
 npm run release:build:mac
 ```
 
 `release:build:mac` 会：
-- 强制当前为干净的 main / Apple Silicon Mac，检查密钥、公钥格式和密码；
-- 运行完整 `npm run release:check`，再准备 Next.js standalone；
-- 使用本地 Tauri 构建完整 App/DMG、签名的 `Pi Agent.app.tar.gz` 和 `.sig`；
+- 强制当前为干净的 main / Apple Silicon Mac，检查密钥、公钥格式和密码；同时要求 Developer ID 身份和完整的公证凭证，避免无意回退到 ad-hoc 发行；
+- 运行完整 `npm run release:check`，再准备 Next.js standalone；扫描 `src-tauri/resources/server` 下全部 Mach-O 原生文件（包括 x64/arm64 依赖）进行带安全时间戳的 Developer ID 签名，并对内置 `Pi Agent Server.app` 单独签名与验证；
+- 使用本地 Tauri 构建完整 App/DMG、签名的 `Pi Agent.app.tar.gz` 和 `.sig`；如苹果公证拒绝则构建失败，不上传；在创建发布元数据前再次验证签名、公证票据和 Gatekeeper；
 - 通过临时命令行配置注入 Fork Updater 公钥，不写入受 Git 管理的 Tauri 配置；
 - 生成 `src-tauri/target/release/bundle/local-release/latest.json`（仅 `darwin-aarch64`）及 `release-build.json`（版本、提交 SHA 和资产 SHA256）。
 
 **若 DMG 制作失败，正式流程停止，不能上传旧的或不完整的资产。** 不要把只有本地无签名更新的 DMG 当成正式 Release。
+
+苹果公证返回 `Archive contains critical validation errors` 时，优先检查苹果报告的路径。如果是内置 Node、`node-pty`、`sharp`、`libvips` 等未签名或缺少 Hardened Runtime / secure timestamp，不要反复改变 Apple ID 密码；仓库中的 `scripts/sign-staged-macos.mjs` 会在 Tauri 打包前处理这些嵌入式二进制。可在修复分支上先运行 `node --test scripts/sign-staged-macos.test.mjs` 进行跨平台单元测试，再合入 main 后正式构建。
 
 审核打包产物后：
 
@@ -94,7 +97,7 @@ npm run release:build:mac
 npm run release:publish:mac
 ```
 
-`release:publish:mac` 检查：main 与 origin/main 完全一致、工作区干净、构建对应当前提交、资产哈希未变、Updater 签名与 latest.json 匹配、组件清单正确以及版本 tag 没有被其它 Release 使用。然后在本地创建并推送注释 tag（若已有则确认指向相同 commit），用 **gh** 创建 Draft Release 并上传五项资产：
+`release:publish:mac` 检查：main 与 origin/main 完全一致、工作区干净、构建对应当前提交、资产哈希未变、Updater 签名与 latest.json 匹配、组件清单正确、构建元数据中已确认苹果公证，并在**创建 tag 之前**重新验证本地 App 的 `codesign --deep --strict`、`xcrun stapler validate` 和 `spctl --assess`。此前的 ad-hoc 包与公证失败包不得发布。版本 tag 也不能被其它 Release 使用。然后在本地创建并推送注释 tag（若已有则确认指向相同 commit），用 **gh** 创建 Draft Release 并上传五项资产：
 
 - `Pi.Agent_<版本>_aarch64.dmg`
 - `Pi.Agent.app.tar.gz`（本地脚本将 Tauri 产物复制并规范化的上传名称）
