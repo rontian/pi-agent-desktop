@@ -21,6 +21,7 @@ export function uploadAssetPaths(version) {
 export function macReleaseAssets(version) {
   const normalized = normalizeVersion(version);
   return {
+    app: join(RELEASE_DIR, "macos", "Pi Agent.app"),
     dmg: join(RELEASE_DIR, "dmg", "Pi Agent_" + normalized + "_aarch64.dmg"),
     archive: join(RELEASE_DIR, "macos", "Pi Agent.app.tar.gz"),
     signature: join(RELEASE_DIR, "macos", "Pi Agent.app.tar.gz.sig"),
@@ -64,6 +65,7 @@ export async function describeFile(path) {
 export async function verifyBuildAssets(metadata) {
   if (!metadata || typeof metadata !== "object") throw new Error("Invalid release-build.json");
   if (metadata.tag !== forkReleaseTag(metadata.version)) throw new Error("Release tag does not match Fork version");
+  if (metadata.appleNotarized !== true) throw new Error("Apple notarization has not been verified; rebuild before publishing.");
   const paths = uploadAssetPaths(metadata.version);
   const selected = {
     dmg: paths.dmg,
