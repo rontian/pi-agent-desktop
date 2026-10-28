@@ -40,7 +40,7 @@ export const APP_UPDATE_PROJECTS: readonly AppUpdateProject[] = [
 ];
 
 function parseVersion(value: string): ParsedVersion | null {
-  const display = value.trim().replace(/^v/i, "");
+  const display = value.trim().replace(/^rontian-v/i, "").replace(/^v/i, "");
   const match = /^(\d+)\.(\d+)(?:\.(\d+))?(?:-([0-9A-Za-z.-]+))?(?:\+[0-9A-Za-z.-]+)?$/.exec(display);
   if (!match) return null;
 
@@ -135,6 +135,9 @@ function parseRelease(project: AppUpdateProject, raw: GitHubRelease): AppCompone
     throw new Error("GitHub returned an invalid release payload.");
   }
 
+  if (!raw.tag_name.startsWith("rontian-v")) {
+    throw new Error("GitHub release tag is not a rontian Fork release.");
+  }
   const latest = parseVersion(raw.tag_name);
   const current = parseVersion(project.currentVersion);
   if (!latest || !current) throw new Error("GitHub returned an invalid release version.");

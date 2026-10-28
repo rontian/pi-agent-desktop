@@ -2,7 +2,7 @@
 // Publish the exact previously-built assets, not a silent rebuild. gh handles all asset uploads.
 import { execFileSync, spawnSync } from "node:child_process";
 import { readFile } from "node:fs/promises";
-import { rootDir } from "./release-components.mjs";
+import { rootDir, forkReleaseTag } from "./release-components.mjs";
 import { RELEASE_METADATA_PATH, RELEASE_LATEST_PATH, verifyBuildAssets } from "./local-release.mjs";
 
 const REPO = "rontian/pi-agent-desktop";
@@ -33,7 +33,7 @@ if (metadata.commit !== head || metadata.repository !== REPO) {
 const version = JSON.parse(await readFile("src-tauri/pi-agent-desktop-package.json", "utf8")).version;
 if (metadata.version !== version) throw new Error("Built version is no longer current. Rebuild.");
 const paths = await verifyBuildAssets(metadata);
-const tag = "v" + version;
+const tag = forkReleaseTag(version);
 const exists = spawnSync("gh", ["release", "view", tag, "--repo", REPO], { cwd: rootDir, stdio: "ignore" });
 if (exists.status === 0) throw new Error("Release " + tag + " already exists (possibly a draft). Inspect it before retrying.");
 // Tag exactly this commit; avoid creating a different release tag on the server.

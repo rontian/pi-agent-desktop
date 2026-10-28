@@ -3,6 +3,10 @@ import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 
 export const rootDir = dirname(dirname(fileURLToPath(import.meta.url)));
+export const FORK_RELEASE_TAG_PREFIX = "rontian-v";
+export function forkReleaseTag(version) {
+  return `${FORK_RELEASE_TAG_PREFIX}${normalizeVersion(version)}`;
+}
 
 export const componentRepositories = {
   "pi-agent-desktop": "rontian/pi-agent-desktop",
@@ -11,7 +15,7 @@ export const componentRepositories = {
 };
 
 export function normalizeVersion(value) {
-  const normalized = String(value).trim().replace(/^v/i, "");
+  const normalized = String(value).trim().replace(/^rontian-v/i, "").replace(/^v/i, "");
   if (!/^\d+\.\d+(?:\.\d+)?(?:-[0-9A-Za-z.-]+)?(?:\+[0-9A-Za-z.-]+)?$/.test(normalized)) {
     throw new Error(`Invalid release version: ${value}`);
   }
@@ -65,14 +69,13 @@ export function nextPatchVersion(value) {
 export function nextDesktopVersion(current, releasedVersions) {
   const normalizedCurrent = normalizeVersion(current);
   const released = (releasedVersions ?? []).map(normalizeVersion);
-  if (!released.some((version) => compareVersions(version, normalizedCurrent) === 0)) {
-    return normalizedCurrent;
-  }
   const newest = released.reduce(
     (highest, version) => (compareVersions(version, highest) > 0 ? version : highest),
     normalizedCurrent,
   );
-  return nextPatchVersion(newest);
+  return released.some((version) => compareVersions(version, normalizedCurrent) >= 0)
+    ? nextPatchVersion(newest)
+    : normalizedCurrent;
 }
 
 /** A manual fork release advances beyond both the working and published versions. */
@@ -133,6 +136,10 @@ export async function fetchLatestRelease(repository, options = {}) {
   if (response.status === 404 && options.allowMissing) return null;
   if (!response.ok) throw new Error(`${repository} release request failed with HTTP ${response.status}.`);
   const release = await response.json();
+  if (repository === componentRepositories["pi-agent-desktop"]
+    && !String(release.tag_name).startsWith(FORK_RELEASE_TAG_PREFIX)) {
+    throw new Error(`Ignoring release with non-Fork tag: ${release.tag_name}`);
+  }
   if (typeof release.tag_name !== "string" || typeof release.html_url !== "string") {
     throw new Error(`${repository} returned an invalid release payload.`);
   }
@@ -163,6 +170,8 @@ export async function fetchRecentReleases(repository, options = {}) {
   }
   return releases.flatMap((release) => {
     if (!release || release.draft === true || typeof release.tag_name !== "string") return [];
+    if (repository === componentRepositories["pi-agent-desktop"]
+      && !release.tag_name.startsWith(FORK_RELEASE_TAG_PREFIX)) return [];
     try {
       return [{
         version: normalizeVersion(release.tag_name),
