@@ -20,6 +20,8 @@ npm run desktop:dev
 
 ## 构建 App 与 DMG
 
+本地 `desktop:build` 不生成 Updater 签名产物，也不需要 `TAURI_SIGNING_PRIVATE_KEY`；要发布带自动更新功能的正式包，请使用 [独立发行手册](./fork-release.zh-CN.md) 中的 GitHub Actions 流程。
+
 ```bash
 npm install
 npm run desktop:build
@@ -29,7 +31,7 @@ npm run desktop:build
 
 1. 在 `.next-desktop/` 生成隔离的 Next.js standalone build。
 2. 将服务端资源与当前平台架构的 Node runtime 暂存给 Tauri。
-3. 在 macOS 生成 `.app` 和 `.dmg`，在 Windows x64 生成 NSIS `-setup.exe`，在 Linux x64 生成 `.deb`。
+3. 在 macOS 生成 `.app` 和 `.dmg`，在 Windows x64 生成 NSIS `-setup.exe`，在 Linux x64 生成 `.deb`（本地关闭 updater 签名归档生成）。
 
 Linux 安装包依赖 WebKitGTK 4.1 和 GTK 3 运行库；Node runtime 已包含在安装包中，用户无需另行安装 Node.js。
 
